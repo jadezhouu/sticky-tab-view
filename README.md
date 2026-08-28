@@ -1,15 +1,30 @@
 # StickyTabView
 
-React Native components for a collapsible header, horizontal tab paging, gesture-driven scroll synchronization, and masonry layouts. Built on `react-native-reanimated` and `react-native-gesture-handler`.
+> 中文文档：[README.zh-CN.md](./README.zh-CN.md)
+
+React Native components for a gesture-responsive collapsible header, horizontal tab paging, synchronized scrolling, and masonry layouts. Built on `react-native-reanimated` and `react-native-gesture-handler`.
 
 > **Beta release.** The current Reanimated 4 release line is published under the `next` dist-tag. Use it in development first and pin a tested version for production applications.
 
-<!-- Screenshot placeholder: replace this block with a real screenshot or GIF before the stable release. Suggested path: ./docs/assets/sticky-tab-view-demo.png -->
-<p align="center"><em>Demo screenshot placeholder — add a real iOS or Android screenshot here.</em></p>
+<p align="center">
+  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0-beta.0/sticky-tab-view-v2.0.0-beta.0-demo.mp4">
+    <img
+      src="./.github/assets/demo.PNG"
+      width="360"
+      alt="StickyTabView demo showing collapsible tabs and scrolling content"
+    />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0-beta.0/sticky-tab-view-v2.0.0-beta.0-demo.mp4">
+    Watch the HD demo video
+  </a>
+</p>
 
 ## Features
 
-- **StickyTabView** — Collapsible header + horizontal paging tabs with synchronized scroll positions
+- **StickyTabView** — Gesture-responsive collapsible header + horizontal paging tabs with synchronized scroll positions
 - **ElasticScrollView** — Gesture-driven scroll view with bounce, paging, and header linkage
 - **ElasticPullRefreshHeader** — Built-in pull-to-refresh indicator (customizable via the `PullRefreshHeaderComponent` contract)
 - **MasonryList** — High-performance waterfall/masonry list with cell recycling, pagination, and multi-section support
@@ -175,7 +190,7 @@ export default function MyScreen() {
 
 ### StickyTabView
 
-A paged container with a shared collapsible header. Exposes an imperative handle via `ref`.
+A paged container with a shared collapsible header. Vertical drags that begin in the header area drive the active tab's scrolling and header collapse, so scrolling remains continuous above and below the tab bar. The component also exposes an imperative handle via `ref`.
 
 | Prop                  | Type                                    | Default      | Description                                                                |
 | --------------------- | --------------------------------------- | ------------ | -------------------------------------------------------------------------- |
