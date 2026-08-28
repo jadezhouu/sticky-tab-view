@@ -1,0 +1,100 @@
+name: Release
+
+# npm Trusted Publishing 发布工作流。
+#
+# 触发方式：只由 GitHub Release（published）触发，配合受保护的 `npm-release`
+# environment。不由普通 push 自动发布。
+#
+# 认证：通过 OIDC（id-token: write）与 npm 建立信任，不使用长期 NPM_TOKEN。
+#
+# 环境要求（npm Trusted Publishing）：
+#   - Node.js >= 22.14.0
+#   - npm >= 11.5.1（Node 自带 npm 不满足，本工作流显式升级并打印版本留证）
+#
+# 版本策略（与 CONTRIBUTING / CHANGELOG 一致）：
+#   - tag `v${version}` 必须与 package.json version 完全一致
+#   - 当前发布线必须是 2.x（Reanimated 4）；其他 major 一律阻断
+#   - version 含预发布段（如 2.0.0-beta.0）→ `next`；稳定版（如 2.0.0）→ `latest`
+#   - 未来 Reanimated 3 兼容线（1.x）使用独立的 `reanimated3` / `reanimated3-next`
+#     tag，将在单独的 job 中实现，不与本 job 的 dist-tag 逻辑混用。
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  # 同一 tag 的并发发布保护：发布是低频高风险操作，禁止并发覆盖。
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    environment: npm-release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          # 固定满足 Trusted Publishing 的 Node 小版本（>= 22.14.0）
+          node-version: '22.14.0'
+          registry-url: 'https://registry.npmjs.org'
+
+      # npm >= 11.5.1 是 OIDC Trusted Publishing 的前置条件；打印版本留证。
+      - name: Ensure npm >= 11.5.1
+        run: |
+          echo "node: $(node --version)"
+          echo "npm before: $(npm --version)"
+          if [[ "$(npm --version | cut -d. -f1)" -lt 11 ]]; then
+            npm install -g npm@11.5.1
+          fi
+          echo "npm after: $(npm --version)"
+
+      # 不缓存依赖：发布是低频、高风险操作，始终从锁文件干净安装。
+      - run: pnpm install --frozen-lockfile
+
+      # 发布前运行统一 release check 与真实 tarball 消费 smoke，任一失败即阻断发布。
+      - run: pnpm release:check
+      - run: pnpm smoke:consumer
+
+      # 版本策略校验：tag 与 package.json 一致，且必须属于当前 2.x 发布线。
+      - name: Verify version policy
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          REF_TAG="${GITHUB_REF#refs/tags/v}"
+          if [[ "${REF_TAG}" != "${VERSION}" ]]; then
+            echo "::error::Tag v${REF_TAG} does not match package.json version ${VERSION}"
+            exit 1
+          fi
+          MAJOR="${VERSION%%\.*}"
+          if [[ "${MAJOR}" != "2" ]]; then
+            echo "::error::Current release line must be 2.x (Reanimated 4), got ${VERSION}"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      # 从 version 推导 dist-tag：含预发布段 → next，否则 → latest。
+      # 稳定版永远只到 latest，预发布永远只到 next，二者互不覆盖。
+      - name: Derive dist-tag
+        id: dist-tag
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "tag=next" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public --tag "${{ steps.dist-tag.outputs.tag }}"
+
+  # 未来 Reanimated 3 兼容线（1.x）发布 job 占位：使用 `reanimated3` / `reanimated3-next`
+  # dist-tag，且触发条件与主线（2.x）区分。当前 1.x 尚未实现，故不启用。
+  # publish-reanimated3:
+  #   name: Publish Reanimated 3 line
+  #   if: false
