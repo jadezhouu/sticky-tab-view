@@ -49,7 +49,7 @@
     "prepublishOnly": "pnpm release:check",
     "pretest:package": "pnpm build",
     "test:package": "jest tests/exports.test.ts --runInBand",
-    "test:unit": "jest tests/remediation.test.ts tests/benchmark-data.test.ts tests/sticky-tab-demo.test.ts --runInBand",
+    "test:unit": "jest tests/remediation.test.ts tests/benchmark-data.test.ts tests/sticky-tab-demo.test.ts tests/release-workflow.test.ts --runInBand",
     "test:component": "jest tests/components tests/benchmark-controls.test.tsx --runInBand",
     "test": "pnpm test:package && pnpm test:unit && pnpm test:component",
     "typecheck": "tsc --noEmit",

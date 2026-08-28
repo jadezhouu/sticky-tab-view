@@ -2,8 +2,9 @@ name: Release
 
 # npm Trusted Publishing 发布工作流。
 #
-# 触发方式：只由 GitHub Release（published）触发，配合受保护的 `npm-release`
-# environment。不由普通 push 自动发布。
+# 触发方式：GitHub Release（published）自动触发；在 GitHub 事件未派发时，可由
+# 维护者输入已发布的 Release tag 手动补发。两种方式都配合受保护的 `npm-release`
+# environment，不由普通 push 自动发布。
 #
 # 认证：通过 OIDC（id-token: write）与 npm 建立信任，不使用长期 NPM_TOKEN。
 #
@@ -21,6 +22,16 @@ name: Release
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing published GitHub Release tag (for example, v2.0.0-beta.1)
+        required: true
+        type: string
+
+env:
+  # release 事件使用其 tag；手动补发必须显式指定同一个已发布 Release 的 tag。
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
 
 permissions:
   contents: read
@@ -28,7 +39,7 @@ permissions:
 
 concurrency:
   # 同一 tag 的并发发布保护：发布是低频高风险操作，禁止并发覆盖。
-  group: npm-publish-${{ github.ref }}
+  group: npm-publish-${{ github.event.release.tag_name || inputs.tag }}
   cancel-in-progress: false
 
 jobs:
@@ -38,6 +49,29 @@ jobs:
     environment: npm-release
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      # 自动触发时 GitHub 已保证 release 为 published。手动补发时额外验证，防止
+      # 把 workflow_dispatch 变成可绕过 Release 流程的任意 npm 发布入口。
+      - name: Verify manual release target
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "${RELEASE_TAG}" != v* ]]; then
+            echo "::error::Release tag must start with v, got ${RELEASE_TAG}"
+            exit 1
+          fi
+          RELEASE_JSON="$(gh release view "${RELEASE_TAG}" --json tagName,isDraft)"
+          if [[ "$(jq -r '.tagName' <<< "${RELEASE_JSON}")" != "${RELEASE_TAG}" ]]; then
+            echo "::error::Release tag does not match ${RELEASE_TAG}"
+            exit 1
+          fi
+          if [[ "$(jq -r '.isDraft' <<< "${RELEASE_JSON}")" == "true" ]]; then
+            echo "::error::Release ${RELEASE_TAG} is still a draft"
+            exit 1
+          fi
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -66,7 +100,7 @@ jobs:
       - name: Verify version policy
         run: |
           VERSION="$(node -p "require('./package.json').version")"
-          REF_TAG="${GITHUB_REF#refs/tags/v}"
+          REF_TAG="${RELEASE_TAG#v}"
           if [[ "${REF_TAG}" != "${VERSION}" ]]; then
             echo "::error::Tag v${REF_TAG} does not match package.json version ${VERSION}"
             exit 1
