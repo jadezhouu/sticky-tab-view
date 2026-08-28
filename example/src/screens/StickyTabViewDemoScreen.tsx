@@ -1,13 +1,13 @@
 /**
- * StickyTabView 功能全览 Demo
+ * StickyTabView feature overview demo
  *
- * 覆盖功能清单：
- *   ① StickyTabView    — 可折叠 Header + 横向分页 Tab + 各 Tab 独立 scroll state
- *   ② ref.setTab       — 编程跳转 Tab（点击 TabBar 时调用）
- *   ③ Tab 1 "文章"     — ElasticScrollView + 下拉刷新 + 触底加载更多 + bounces
- *   ④ Tab 2 "瀑布流"   — MasonryList 双列 + 异步 onFetch 分页 + 下拉刷新 + 首屏 Loading
- *   ⑤ Tab 3 "分页"     — ElasticScrollView + pagingEnabled="vertical"（滑动吸附翻页）
- *   ⑥ Tab 4 "关于"     — ElasticScrollView + contentInsets + showsVerticalScrollIndicator
+ * Features covered:
+ *   ① StickyTabView    — collapsible header + horizontal paging tabs + per-tab scroll state
+ *   ② ref.setTab       — programmatic tab switching (called on tab bar tap)
+ *   ③ Tab 1 "Articles" — ElasticScrollView + pull-to-refresh + infinite load + bounces
+ *   ④ Tab 2 "Masonry"  — MasonryList 2 columns + async onFetch paging + refresh + initial loading
+ *   ⑤ Tab 3 "Paging"   — ElasticScrollView + pagingEnabled="vertical" (snap paging)
+ *   ⑥ Tab 4 "About"    — ElasticScrollView + contentInsets + showsVerticalScrollIndicator
  */
 
 import React, { useRef, useState } from "react";
@@ -37,13 +37,13 @@ import {
   TOnRefreshParam,
 } from "@jadezhou/sticky-tab-view";
 
-// ─── 布局常量 ──────────────────────────────────────────────────────────────────
-const HEADER_BASE_H = 220; // 可折叠 Header 的基础高度
-const TAB_BAR_H = 48; // TabBar 的高度（同时是吸顶后保留高度）
-const PAGE_H = 520; // Tab3 每张分页卡片的高度
-const P_Top = 16; // Tab 内容顶部的内边距
+// ─── Layout constants ──────────────────────────────────────────────────────────
+const HEADER_BASE_H = 220; // Base height of the collapsible header
+const TAB_BAR_H = 48; // Tab bar height (also the height retained once pinned)
+const PAGE_H = 520; // Height of each paging card in Tab 3
+const P_Top = 16; // Top padding of tab content
 
-// ─── 颜色 ──────────────────────────────────────────────────────────────────────
+// ─── Colors ────────────────────────────────────────────────────────────────────
 const C = {
   purple: "#6C5CE7",
   green: "#00B894",
@@ -60,7 +60,7 @@ const C = {
   IKB:"#002FA7",
 };
 
-// ─── 类型 ──────────────────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────
 type Article = {
   id: string;
   title: string;
@@ -81,33 +81,33 @@ type PhotoItem = TItemBase & {
   imageUrl: string;
 };
 
-// ─── Mock 数据生成 ─────────────────────────────────────────────────────────────
+// ─── Mock data generation ──────────────────────────────────────────────────────
 const TITLES = [
-  "React Native 新架构深度解析",
-  "Reanimated v4 手势系统完全指南",
-  "Flutter vs RN 2026 年对决",
-  "Expo SDK 55 全新特性速览",
-  "TypeScript 5.9 泛型高级用法",
-  "JSI 原生模块从零到一",
-  "Hermes 引擎：解析到执行",
-  "Metro 打包速度极限优化",
-  "iOS 18 隐私权限全面适配",
-  "Android 15 新 API 踩坑",
-  "React 19 并发特性最佳实践",
-  "Zustand vs MobX 横向对比",
+  "Deep Dive into React Native New Architecture",
+  "Reanimated v4 Gesture System Complete Guide",
+  "Flutter vs RN: 2026 Showdown",
+  "Expo SDK 55 New Features Overview",
+  "Advanced TypeScript 5.9 Generics",
+  "JSI Native Modules from Zero to One",
+  "Hermes Engine: Parse to Execute",
+  "Metro Bundler Speed Optimization",
+  "iOS 18 Privacy Permission Guide",
+  "Android 15 New API Pitfalls",
+  "React 19 Concurrent Features Best Practices",
+  "Zustand vs MobX Comparison",
 ];
 const SUMMARIES = [
-  "深入源码，看清每行背后的意图，理解设计决策与取舍。",
-  "原理 + 实战，帮你快速掌握核心知识点，避免常见误区。",
-  "全面对比两大框架的生态、性能与开发体验，做出合理选型。",
-  "从零到一，用最短路径完成项目落地，包含 5 个真实案例。",
-  "避开常见陷阱，少走一年弯路，节省数百小时调试时间。",
+  "Read the source to understand the intent behind each line and the design trade-offs.",
+  "Theory plus practice to master core concepts and avoid common pitfalls.",
+  "Compare ecosystem, performance, and DX to make the right choice.",
+  "From zero to one with five real-world cases.",
+  "Avoid common traps and save hundreds of hours of debugging.",
 ];
 const TAGS = [
-  { tag: "架构", color: C.purple },
-  { tag: "动画", color: C.green },
-  { tag: "性能", color: C.orange },
-  { tag: "工具链", color: C.blue },
+  { tag: "Architecture", color: C.purple },
+  { tag: "Animation", color: C.green },
+  { tag: "Performance", color: C.orange },
+  { tag: "Tooling", color: C.blue },
 ];
 const CARD_BGS = [
   "#D9E4FF",
@@ -128,18 +128,18 @@ const PHOTO_COLORS = [
   "#EAFFD6",
 ];
 const PHOTO_TITLES = [
-  "深夜 Debug 破防瞬间",
-  "删库跑路纪念留影",
-  "产品经理求饶实录",
-  "Git Push --force 惨案",
-  "祖传代码屎山大搜赏",
-  "面向 StackOverflow 编程",
-  "摸鱼高阶指北",
-  "需求评审之舌战群儒",
-  "一杯茶一包烟",
-  "AI 生成代码翻车现场",
-  "明天上线今天重构",
-  "测试妹子又在喊了",
+  "Midnight Debug Meltdown",
+  "Drop-the-Database-and-Run Souvenir",
+  "PM Begging for Mercy",
+  "Git Push --force Disaster",
+  "Legacy Code Mountain Expedition",
+  "StackOverflow-Driven Development",
+  "Advanced Guide to Slacking Off",
+  "Requirements Review Debate",
+  "A Cup of Tea, a Pack of Cigs",
+  "AI-Generated Code Gone Wrong",
+  "Refactor Today, Ship Tomorrow",
+  "QA Is Calling Again",
 ];
 const PHOTO_HEIGHTS = [
   160, 220, 140, 260, 180, 200, 150, 240, 170, 190, 130, 280,
@@ -147,38 +147,38 @@ const PHOTO_HEIGHTS = [
 const STORIES = [
   {
     emoji: "🌅",
-    title: "垂直分页演示",
-    sub: "向上滑动，每张卡片独立吸附 ↑",
+    title: "Vertical Paging Demo",
+    sub: "Swipe up, each card snaps independently ↑",
     bg: "#4A90D9",
   },
   {
     emoji: "🎨",
     title: "pagingEnabled",
-    sub: '"vertical" 模式，松手自动对齐',
+    sub: '"vertical" mode, auto-align on release',
     bg: C.purple,
   },
   {
     emoji: "🚀",
-    title: "pageSize 可定制",
-    sub: "传入 { height: 320 } 固定页高",
+    title: "Custom pageSize",
+    sub: "Pass { height: 320 } to fix the page height",
     bg: C.green,
   },
   {
     emoji: "⚡",
-    title: "速度感应换页",
-    sub: "快划直接跳到下一页",
+    title: "Velocity-Sensitive Paging",
+    sub: "Fast swipes jump to the next page",
     bg: C.orange,
   },
   {
     emoji: "🌊",
-    title: "弹性物理动画",
-    sub: "withSpring 驱动，手感细腻自然",
+    title: "Spring Physics",
+    sub: "Driven by withSpring for a natural feel",
     bg: C.teal,
   },
   {
     emoji: "🎯",
-    title: "到达最后一页",
-    sub: "继续上滑会被边界回弹拦住",
+    title: "Last Page Reached",
+    sub: "Further swipes are stopped by boundary bounce",
     bg: C.pink,
   },
 ];
@@ -236,7 +236,7 @@ function ArticleCard({ item }: { item: Article }) {
 }
 
 function PhotoCard({ item }: { item: PhotoItem }) {
-  // renderItem 会被放在 WaterfallItem 里，其父 View 已设好 { width, height }
+  // renderItem is placed inside WaterfallItem, whose parent View already sets { width, height }
   return (
     <View style={[styles.photoCard, { backgroundColor: item.color }]}>
       <Image
@@ -253,13 +253,13 @@ function ListEnd({ count, total }: { count: number; total: number }) {
   return (
     <View style={styles.listEnd}>
       <Text style={styles.listEndText}>
-        — 已加载 {count} / {total} 条，已全部显示 —
+        — Loaded {count} / {total}, all shown —
       </Text>
     </View>
   );
 }
 
-// ─── Tab 1：文章列表（下拉刷新 + 触底加载更多） ──────────────────────────────
+// ─── Tab 1: article list (pull-to-refresh + infinite load) ────────────────────
 function Tab1Articles({ tabIndex }: { tabIndex: number }) {
   const insets = useSafeAreaInsets();
   const TOTAL_H = HEADER_BASE_H + insets.top + TAB_BAR_H + P_Top;
@@ -300,7 +300,7 @@ function Tab1Articles({ tabIndex }: { tabIndex: number }) {
       onEndReached={handleEndReached}
       endReachedThreshold={400}
     >
-      {/* StickyTabView 要求每个 Tab 内容顶部留出 Header 等高的空白 */}
+      {/* StickyTabView requires each tab to reserve header-height blank space at the top */}
       <View style={{ height: TOTAL_H }} />
       <View style={styles.pad}>
         {items.map((item) => (
@@ -312,7 +312,7 @@ function Tab1Articles({ tabIndex }: { tabIndex: number }) {
   );
 }
 
-// ─── Tab 2：瀑布流（Waterfall + 异步分页 + 首屏 Loading） ─────────────────────
+// ─── Tab 2: masonry (waterfall + async paging + initial loading) ───────────────
 function Tab2Waterfall() {
   const insets = useSafeAreaInsets();
   const TOTAL_H = HEADER_BASE_H + insets.top + TAB_BAR_H;
@@ -320,7 +320,7 @@ function Tab2Waterfall() {
   const pageRef = useRef(0);
 
   const onFetch = async (page: number) => {
-    // 模拟网络请求延迟
+    // Simulate network latency
     await new Promise<void>((r) => setTimeout(r, page === 0 ? 1200 : 700));
     const items = genPhotos(page, 8);
     return { items, hasMore: page < 3 };
@@ -332,9 +332,9 @@ function Tab2Waterfall() {
       bounces="vertical"
       showsVerticalScrollIndicator={false}
       onFetch={onFetch}
-      // 每列 2 列瀑布流
+      // 2 columns
       columnForSection={() => 2}
-      // 根据 PhotoItem.height 决定每个格子的高度（含内边距）
+      // Item height from PhotoItem.height (plus padding)
       heightForItem={(item) => item.height + 36}
       renderItem={(item) => <PhotoCard item={item} />}
       horizontalPadding={12}
@@ -342,18 +342,18 @@ function Tab2Waterfall() {
       renderLoading={() => (
         <View style={styles.loadingCenter}>
           <ActivityIndicator size="large" color={C.purple} />
-          <Text style={styles.loadingText}>首次加载中…</Text>
+          <Text style={styles.loadingText}>Loading…</Text>
         </View>
       )}
       renderLoadingMore={() => (
         <View style={styles.loadMoreRow}>
           <ActivityIndicator size="small" color={C.purple} />
-          <Text style={styles.loadMoreText}>加载更多…</Text>
+          <Text style={styles.loadMoreText}>Loading more…</Text>
         </View>
       )}
       renderEmpty={() => (
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>暂无内容</Text>
+          <Text style={styles.emptyText}>No content</Text>
         </View>
       )}
       renderHeader={() => (
@@ -365,24 +365,24 @@ function Tab2Waterfall() {
   );
 }
 
-// ─── Tab 3：垂直分页（pagingEnabled="vertical" + 固定 pageSize） ──────────────
+// ─── Tab 3: vertical paging (pagingEnabled="vertical" + fixed pageSize) ────────
 function Tab3Paging() {
   const insets = useSafeAreaInsets();
   const TOTAL_H = HEADER_BASE_H + insets.top + TAB_BAR_H;
 
-  // pageH = 容器实测高度（屏幕高度 - 安全区 top - 底部导航），0 表示还未测量
+  // pageH = measured container height (screen height - safe area top - bottom nav); 0 means not measured yet
   const [pageH, setPageH] = useState(0);
 
   return (
     <ElasticScrollView
       bounces="vertical"
       pagingEnabled="vertical"
-      // pageSize.height=0 → 库自动用容器高度（size.height.value）
-      // 测量完成后换成实测值，保证卡片高度与吸附步长严格一致
+      // pageSize.height=0 → the library auto-uses the container height (size.height.value)
+      // Swap to the measured value once available, so card height matches the snap step exactly
       pageSize={{ width: 0, height: pageH }}
       showsVerticalScrollIndicator={false}
       onSizeChange={({ height }) => {
-        // 只取第一次有效值，避免 Header 折叠时容器尺寸变化触发重渲染
+        // Keep only the first valid value to avoid re-renders when the header collapses
         if (height > 0 && pageH === 0) setPageH(height);
       }}
     >
@@ -394,7 +394,7 @@ function Tab3Paging() {
             {
               backgroundColor: story.bg,
               height: pageH || PAGE_H,
-              // 第 0 张卡片 Header 完全展开（TOTAL_H），之后 Header 已折叠（TAB_BAR_H）
+              // Card 0: header fully expanded (TOTAL_H); afterwards the header is collapsed (TAB_BAR_H)
               paddingTop: idx === 0 ? TOTAL_H : TAB_BAR_H,
             },
           ]}
@@ -404,45 +404,45 @@ function Tab3Paging() {
           <Text style={styles.storySubtitle}>{story.sub}</Text>
           <View style={styles.storyBadge}>
             <Text style={styles.storyBadgeText}>
-              第 {idx + 1} / {STORIES.length} 页
+              Page {idx + 1} / {STORIES.length}
             </Text>
           </View>
         </View>
       ))}
       <View style={styles.listEnd}>
-        <Text style={styles.listEndText}>— 已到最后一页 —</Text>
+        <Text style={styles.listEndText}>— End of pages —</Text>
       </View>
     </ElasticScrollView>
   );
 }
 
-// ─── Demo Header（可折叠的个人主页 Banner） ───────────────────────────────────
+// ─── Demo header (collapsible profile banner) ─────────────────────────────────
 function DemoHeader() {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.headerWrap, { height: HEADER_BASE_H + insets.top }]}>
       <View style={[styles.headerBg, { paddingTop: 18 + insets.top }]}>
-        {/* 顶部信息行 */}
+        {/* Top info row */}
         <View style={styles.headerTop}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>CJ</Text>
+            <Text style={styles.avatarText}>JZ</Text>
           </View>
           <View style={{ flex: 1, marginLeft: 14 }}>
             <Text style={styles.headerName}>StickyTabView</Text>
             <Text style={styles.headerHandle}>@ui-library · React Native</Text>
           </View>
         </View>
-        {/* 简介 */}
+        {/* Bio */}
         <Text style={styles.headerBio}>
-          {"高性能滚动容器 + 可折叠/可滑动 Header + 瀑布流 + 垂直分页。\n基于 Reanimated 4 和 RNGH v2 构建。🚀"}
+          {"High-performance scroll containers + collapsible/slidable header + masonry + vertical paging.\nBuilt on Reanimated 4 and RNGH v2. 🚀"}
         </Text>
-        {/* 统计数字行 */}
+        {/* Stats row */}
         <View style={styles.statsRow}>
           {[
-            ["128", "文章"],
-            ["3.2K", "点赞"],
-            ["892", "关注者"],
-            ["46", "话题"],
+            ["128", "Articles"],
+            ["3.2K", "Likes"],
+            ["892", "Followers"],
+            ["46", "Topics"],
           ].map(([n, l]) => (
             <View key={l} style={styles.statItem}>
               <Text style={styles.statNum}>{n}</Text>
@@ -455,8 +455,8 @@ function DemoHeader() {
   );
 }
 
-// ─── Demo TabBar（接收 SharedValue，带弹性指示器） ────────────────────────────
-const TABS = ["文章", "瀑布流", "分页"];
+// ─── Demo tab bar (receives shared values, spring indicator) ──────────────────
+const TABS = ["Articles", "Masonry", "Paging"];
 
 interface TabBarProps {
   x: SharedValue<number>;
@@ -530,7 +530,7 @@ function DemoTabBar({ activeHeaderOffset, current, onSelect, ys }: TabBarProps) 
   );
 }
 
-// ─── 独立悬浮导航栏 ─────────────────────────────────────────────────────────────
+// ─── Floating nav bar ──────────────────────────────────────────────────────────
 export function getHeaderNavOpacity(
   offset: number,
   headerDistance: number,
@@ -575,7 +575,7 @@ const AnimatedNavBar = ({
   );
 };
 
-// ─── 主组件 ───────────────────────────────────────────────────────────────────
+// ─── Main component ────────────────────────────────────────────────────────────
 export function StickyTabViewDemoScreen() {
   const insets = useSafeAreaInsets();
   const tabRef = useRef<{ setTab: (page: number) => void }>(null);
@@ -627,12 +627,12 @@ export function StickyTabViewDemoScreen() {
   );
 }
 
-// ─── 样式 ─────────────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   pad: { paddingHorizontal: 14, gap: 10, paddingBottom: 8 },
 
-  // ── 悬浮导航栏 ──
+  // ── Floating nav bar ──
   stickyNavBar: {
     position: "absolute",
     top: 0,
@@ -744,7 +744,7 @@ const styles = StyleSheet.create({
   },
   articleAuthor: { fontSize: 12, color: C.textMuted },
 
-  // ── Photo Card（MasonryList） ──
+  // ── Photo card (MasonryList) ──
   photoCard: {
     flex: 1,
     borderRadius: 10,
@@ -779,7 +779,7 @@ const styles = StyleSheet.create({
   emptyBox: { padding: 40, alignItems: "center" },
   emptyText: { fontSize: 15, color: C.textMuted },
 
-  // ── Story Card（分页） ──
+  // ── Story card (paging) ──
   storyCard: {
     marginBottom: 0,
     justifyContent: "center",
@@ -865,7 +865,7 @@ const styles = StyleSheet.create({
     fontFamily: "monospace",
   },
 
-  // ── 列表底部 ──
+  // ── List end ──
   listEnd: { paddingVertical: 28, alignItems: "center" },
   listEndText: { fontSize: 13, color: C.textMuted },
 });
