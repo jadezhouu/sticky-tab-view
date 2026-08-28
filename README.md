@@ -7,19 +7,11 @@ React Native components for a gesture-responsive collapsible header, horizontal 
 > **Beta release.** The current Reanimated 4 release line is published under the `next` dist-tag. Use it in development first and pin a tested version for production applications.
 
 <p align="center">
-  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0-beta.0/sticky-tab-view-v2.0.0-beta.0-demo.mp4">
-    <img
-      src="./.github/assets/demo.PNG"
-      width="360"
-      alt="StickyTabView demo showing collapsible tabs and scrolling content"
-    />
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0-beta.0/sticky-tab-view-v2.0.0-beta.0-demo.mp4">
-    Watch the HD demo video
-  </a>
+  <img
+    src="https://raw.githubusercontent.com/jadezhouu/sticky-tab-view/main/.github/assets/demo.PNG"
+    width="360"
+    alt="StickyTabView demo showing collapsible tabs and scrolling content"
+  />
 </p>
 
 ## Features
