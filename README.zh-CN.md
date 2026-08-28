@@ -7,11 +7,19 @@
 > **Beta 版本。** 当前的 Reanimated 4 发布线发布在 `next` dist-tag 下。请先在开发环境中使用，并为生产应用锁定一个经过验证的版本。
 
 <p align="center">
-  <img
-    src="https://raw.githubusercontent.com/jadezhouu/sticky-tab-view/main/.github/assets/demo.PNG"
-    width="360"
-    alt="StickyTabView 可折叠 Tab 与滚动内容演示"
-  />
+  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0-beta.1/sticky-tab-view-demo.mp4">
+    <img
+      src="https://raw.githubusercontent.com/jadezhouu/sticky-tab-view/main/.github/assets/demo.PNG"
+      width="360"
+      alt="StickyTabView 可折叠 Tab 与滚动内容演示"
+    />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0-beta.1/sticky-tab-view-demo.mp4">
+    观看高清演示视频
+  </a>
 </p>
 
 ## 特性
