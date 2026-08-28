@@ -14,6 +14,19 @@ Version lines:
 
 No unreleased changes yet.
 
+## [2.0.0-beta.1] — 2026-08-28
+
+First full public prerelease with provenance and release media.
+
+### Added
+
+- npm provenance attestation via GitHub Actions OIDC (Trusted Publishing).
+- Demo video linked from the README (hosted on the GitHub Release asset).
+
+### Changed
+
+- No functional changes from `2.0.0-beta.0` (identical code and API surface).
+
 ## [2.0.0-beta.0] — 2026-08-28
 
 First public prerelease candidate for the Reanimated 4 main line (`2.x`).
