@@ -6,6 +6,11 @@
     "skipLibCheck": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    // 显式声明 target/lib：代码使用至 ES2019（Object.fromEntries/flatMap）的全局。
+    // 不显式声明时 tsc 退到默认 ES5+DOM，编译结果取决于是否恰好有 @types/node 注入
+    // ES2015-ES2020（CI 与本地 hoist 行为不同导致 CI 全量失败）。显式声明后环境无关。
+    "target": "es2020",
+    "lib": ["ES2020", "DOM"],
     "paths": {
       "@/*": ["./src/*"]
     }
