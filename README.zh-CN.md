@@ -4,10 +4,8 @@
 
 用于可响应手势的折叠头部、横向分页 Tab、同步滚动与瀑布流布局的 React Native 组件。基于 `react-native-reanimated` 与 `react-native-gesture-handler` 构建。
 
-> **Beta 版本。** 当前的 Reanimated 4 发布线发布在 `next` dist-tag 下。请先在开发环境中使用，并为生产应用锁定一个经过验证的版本。
-
 <p align="center">
-  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0-beta.1/sticky-tab-view-demo.mp4">
+  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0/sticky-tab-view-demo.mp4">
     <img
       src="https://raw.githubusercontent.com/jadezhouu/sticky-tab-view/main/.github/assets/demo.PNG"
       width="360"
@@ -17,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0-beta.1/sticky-tab-view-demo.mp4">
+  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0/sticky-tab-view-demo.mp4">
     观看高清演示视频
   </a>
 </p>
@@ -40,14 +38,12 @@
 ## 安装
 
 ```bash
-npm install @jadezhou/sticky-tab-view@next
+npm install @jadezhou/sticky-tab-view
 # 或
-pnpm add @jadezhou/sticky-tab-view@next
+pnpm add @jadezhou/sticky-tab-view
 # 或
-yarn add @jadezhou/sticky-tab-view@next
+yarn add @jadezhou/sticky-tab-view
 ```
-
-当 `2.0.0` 发布到 `latest` 后，可省略 `@next` 后缀。
 
 ### Peer 依赖
 

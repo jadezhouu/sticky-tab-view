@@ -14,6 +14,14 @@ Version lines:
 
 No unreleased changes yet.
 
+## [2.0.0] — 2026-08-31
+
+First stable release of the Reanimated 4 main line (`2.x`).
+
+### Changed
+
+- Promoted from `2.0.0-beta.1` to stable. No functional changes from the prerelease — identical code and API surface, now published under the `latest` dist-tag.
+
 ## [2.0.0-beta.1] — 2026-08-28
 
 First full public prerelease with provenance and release media.

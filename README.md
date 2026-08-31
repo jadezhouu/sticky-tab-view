@@ -4,10 +4,8 @@
 
 React Native components for a gesture-responsive collapsible header, horizontal tab paging, synchronized scrolling, and masonry layouts. Built on `react-native-reanimated` and `react-native-gesture-handler`.
 
-> **Beta release.** The current Reanimated 4 release line is published under the `next` dist-tag. Use it in development first and pin a tested version for production applications.
-
 <p align="center">
-  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0-beta.1/sticky-tab-view-demo.mp4">
+  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0/sticky-tab-view-demo.mp4">
     <img
       src="https://raw.githubusercontent.com/jadezhouu/sticky-tab-view/main/.github/assets/demo.PNG"
       width="360"
@@ -17,7 +15,7 @@ React Native components for a gesture-responsive collapsible header, horizontal 
 </p>
 
 <p align="center">
-  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0-beta.1/sticky-tab-view-demo.mp4">
+  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0/sticky-tab-view-demo.mp4">
     Watch the HD demo video
   </a>
 </p>
@@ -40,14 +38,12 @@ React Native components for a gesture-responsive collapsible header, horizontal 
 ## Installation
 
 ```bash
-npm install @jadezhou/sticky-tab-view@next
+npm install @jadezhou/sticky-tab-view
 # or
-pnpm add @jadezhou/sticky-tab-view@next
+pnpm add @jadezhou/sticky-tab-view
 # or
-yarn add @jadezhou/sticky-tab-view@next
+yarn add @jadezhou/sticky-tab-view
 ```
-
-When `2.0.0` is released to `latest`, the `@next` suffix can be omitted.
 
 ### Peer Dependencies
 

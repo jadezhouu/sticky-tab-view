@@ -1,6 +1,6 @@
 {
   "name": "@jadezhou/sticky-tab-view",
-  "version": "2.0.0-beta.1",
+  "version": "2.0.0",
   "description": "High-performance React Native components: collapsible header, horizontal tab paging, and gesture-driven scroll synchronization.",
   "license": "MIT",
   "author": "jadezhou",
