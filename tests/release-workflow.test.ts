@@ -35,3 +35,37 @@ describe('release workflow recovery contract', () => {
     expect(workflow).toContain('git merge-base --is-ancestor HEAD origin/maintenance/reanimated-3');
   });
 });
+
+describe('Reanimated 3 release line rejects Worklets (control plane gate)', () => {
+  // 只针对 publish-reanimated3 job 断言，避免与 publish-reanimated4 的字符串混淆。
+  const v3Section = workflow.slice(workflow.indexOf('publish-reanimated3:'));
+
+  test('v3 job blocks react-native-worklets across all four dependency fields', () => {
+    expect(v3Section).toContain('react-native-worklets');
+    expect(v3Section).toContain('"dependencies"');
+    expect(v3Section).toContain('"peerDependencies"');
+    expect(v3Section).toContain('"optionalDependencies"');
+    expect(v3Section).toContain('"devDependencies"');
+  });
+
+  test('v3 job also blocks Worklets that only exist in the lockfile', () => {
+    expect(v3Section).toContain('pnpm-lock.yaml');
+    expect(v3Section).toContain('react-native-worklets');
+  });
+
+  test('Worklets block step runs before any npm publish step in the v3 job', () => {
+    const blockIndex = v3Section.indexOf('Block react-native-worklets in Reanimated 3 package');
+    const publishIndex = v3Section.indexOf('- name: Publish to npm');
+    expect(blockIndex).toBeGreaterThan(-1);
+    expect(publishIndex).toBeGreaterThan(-1);
+    expect(blockIndex).toBeLessThan(publishIndex);
+  });
+
+  test('a Worklets hit fails the v3 publish job (exit 1) instead of warning', () => {
+    // 检查 step 必须真正中断发布，而不是只打印告警继续发布。
+    const blockStepStart = v3Section.indexOf('Block react-native-worklets in Reanimated 3 package');
+    const blockStep = v3Section.slice(blockStepStart, blockStepStart + 2200);
+    expect(blockStep).toContain('exit 1');
+    expect(blockStep).toContain('::error::');
+  });
+});
