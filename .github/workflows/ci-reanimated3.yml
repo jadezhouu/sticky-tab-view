@@ -1,0 +1,80 @@
+name: CI Reanimated 3
+
+# Reanimated 3 兼容维护线的独立 CI。
+#
+# 触发范围：只对 maintenance/reanimated-3 分支生效，与 main 的 ci.yml 完全隔离，
+# 两条维护线各自运行自己的 React/RN/Reanimated 依赖树。
+#
+# 本文件由 bootstrap 提交建立，只包含基础的 JS/package 检查（install、lint、
+# typecheck、test、pack）。PR-3（V3-6-03）会扩展为分级矩阵：
+#   - PR required：全部 JS/package/typecheck/tarball checks + Expo 53 Android Paper + RN 0.81 Android Fabric
+#   - nightly / workflow_dispatch：两锚点 × iOS/Android × Paper/Fabric 八个 native build
+#   - release-candidate：锁定 candidate_sha 的全八 build + registry-style consumer
+# required check 名称保持稳定，本文件已有的 job 名称不得被后续 PR 重命名。
+
+on:
+  push:
+    branches: [maintenance/reanimated-3]
+  pull_request:
+    branches: [maintenance/reanimated-3]
+
+permissions:
+  contents: read
+
+jobs:
+  v3-lint:
+    name: V3 Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
+  v3-typecheck:
+    name: V3 Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  v3-test:
+    name: V3 Test (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['20.19.4', '22.14.0']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  v3-build-pack:
+    name: V3 Build & Pack Allowlist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: npm pack --dry-run
