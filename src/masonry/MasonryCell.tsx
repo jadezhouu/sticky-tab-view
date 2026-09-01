@@ -1,10 +1,10 @@
 import React from "react";
 import Reanimated, {
-  runOnJS,
   useDerivedValue,
   useAnimatedStyle,
   useAnimatedReaction,
 } from "react-native-reanimated";
+import { scheduleOnReactNative } from "../scheduleOnReactNative.js";
 import { StyleSheet } from "react-native";
 import { TMasonryCellProps } from "../types.js";
 import { findNearestThumbIndex } from "./model.js";
@@ -26,7 +26,7 @@ export function MasonryCell<T>(props: TMasonryCellProps<T>) {
     () => index.value,
     (next, pre) => {
       if (typeof next === "number" && next !== pre) {
-        runOnJS(setCurrent)(next);
+        scheduleOnReactNative(setCurrent, next);
       }
     },
     [index],

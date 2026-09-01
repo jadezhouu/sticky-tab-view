@@ -2,12 +2,12 @@ import React from "react";
 import { View } from "react-native";
 import Reanimated, {
   cancelAnimation,
-  runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { scheduleOnReactNative } from "../scheduleOnReactNative.js";
 // Reanimated v3 移除了 useAnimatedGestureHandler，改用 Gesture API
 import { Gesture, GestureDetector, State } from "react-native-gesture-handler";
 import { PullHeaderState } from "../refresh/PullRefreshHeader.js";
@@ -293,7 +293,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
     (res, pre) => {
       if (res === true && res !== pre) {
         canLoadMore.value = false;
-        runOnJS(handleLoadMore)();
+        scheduleOnReactNative(handleLoadMore);
       }
     },
   );
@@ -313,7 +313,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
     () => ({ x: x.value, y: y.value }),
     (offset, previous) => {
       if (!previous || offset.x !== previous.x || offset.y !== previous.y) {
-        if (onScroll) runOnJS(onScroll)(offset);
+        if (onScroll) scheduleOnReactNative(onScroll, offset);
       }
     },
     [onScroll],
@@ -338,8 +338,8 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
         ctx.priority = 0;
         if (refreshStatus.value === "settling") refreshStatus.value = "idle";
         ctx.last = { x: evt.absoluteX, y: evt.absoluteY };
-        if (onTouchBegin) runOnJS(onTouchBegin)();
-        if (onScrollBeginDrag) runOnJS(onScrollBeginDrag)();
+        if (onTouchBegin) scheduleOnReactNative(onTouchBegin);
+        if (onScrollBeginDrag) scheduleOnReactNative(onScrollBeginDrag);
       },
       onActive: (evt: TPanEvent, ctx: TGestureContext) => {
         "worklet";
@@ -350,7 +350,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
         }
         if (dragToHideKeyboard && !ctx.keyboardDismissed) {
           ctx.keyboardDismissed = true;
-          runOnJS(dismissKeyboard)();
+          scheduleOnReactNative(dismissKeyboard);
         }
         if (!ctx.isForwarded) parent.onActive?.(evt, ctx);
 
@@ -382,7 +382,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
               shouldChange = true;
             }
             if (shouldChange) {
-              runOnJS(notifyRefreshState)(refreshStatus.value);
+              scheduleOnReactNative(notifyRefreshState, refreshStatus.value);
             }
           }
         }
@@ -391,8 +391,8 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
       onEnd: (evt: TPanEvent, ctx: TGestureContext) => {
         "worklet";
         if (!focus.value && !ctx.isForwarded) return parent.onEnd?.(evt, ctx);
-        if (onTouchEnd) runOnJS(onTouchEnd)();
-        if (onScrollEndDrag) runOnJS(onScrollEndDrag)();
+        if (onTouchEnd) scheduleOnReactNative(onTouchEnd);
+        if (onScrollEndDrag) scheduleOnReactNative(onScrollEndDrag);
         const maxX = getMaxOffset(contentSize.width.value, size.width.value, right);
         const maxY = getMaxOffset(contentSize.height.value, size.height.value, bottom);
         const vx = -evt.velocityX;
@@ -437,7 +437,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
                 y.value < -top - pullRefreshHeaderHeight
               ) {
                 refreshStatus.value = "refreshing";
-                runOnJS(handleRefresh)();
+                scheduleOnReactNative(handleRefresh);
               }
               if (refreshStatus.value === "refreshing") {
                 to -= pullRefreshHeaderHeight;
@@ -521,8 +521,8 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
         "worklet";
         const maxX = getMaxOffset(contentSize.width.value, size.width.value, right);
         const maxY = getMaxOffset(contentSize.height.value, size.height.value, bottom);
-        if (onTouchEnd) runOnJS(onTouchEnd)();
-        if (onScrollEndDrag) runOnJS(onScrollEndDrag)();
+        if (onTouchEnd) scheduleOnReactNative(onTouchEnd);
+        if (onScrollEndDrag) scheduleOnReactNative(onScrollEndDrag);
         if (!focus.value) return;
         if (pagingEnabled === "horizontal") {
           const pageWidth =
@@ -606,7 +606,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
   //   - onActive → Gesture.Pan().onUpdate（新 API 叫 onUpdate）
   //   - onEnd → Gesture.Pan().onEnd
   //   - onCancel/onFail → Gesture.Pan().onFinalize(e, success=false)
-  // 手势回调中出现 JS 异常时，通过 runOnJS 输出到 Metro，避免 C++ 异常穿透到 UIKit 手势系统
+  // 手势回调中出现 JS 异常时，通过 scheduleOnReactNative 输出到 Metro，避免 C++ 异常穿透到 UIKit 手势系统
   const logWorkletError = (location: string, msg: string) => {
     console.error(`[ElasticScrollView][${location}]`, msg);
   };
@@ -634,7 +634,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
           panHandler!.onStart?.(e, ctx);
           gestureCtx.value = ctx;
         } catch (err) {
-          runOnJS(logWorkletError)("onStart", String(err));
+          scheduleOnReactNative(logWorkletError, "onStart", String(err));
         }
       })
       .onUpdate((e) => {
@@ -645,7 +645,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
           panHandler!.onActive?.(e, ctx);
           gestureCtx.value = ctx;
         } catch (err) {
-          runOnJS(logWorkletError)("onUpdate", String(err));
+          scheduleOnReactNative(logWorkletError, "onUpdate", String(err));
         }
       })
       .onEnd((e) => {
@@ -655,7 +655,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
           panHandler!.onEnd?.(e, ctx);
           gestureCtx.value = ctx;
         } catch (err) {
-          runOnJS(logWorkletError)("onEnd", String(err));
+          scheduleOnReactNative(logWorkletError, "onEnd", String(err));
         }
       })
       .onFinalize((_e, success) => {
@@ -672,7 +672,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
             gestureCtx.value = ctx;
           }
         } catch (err) {
-          runOnJS(logWorkletError)("onFinalize", String(err));
+          scheduleOnReactNative(logWorkletError, "onFinalize", String(err));
         }
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -684,7 +684,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
         .enabled(!!tapToHideKeyboard)
         .onEnd(() => {
           "worklet";
-          runOnJS(dismissKeyboard)();
+          scheduleOnReactNative(dismissKeyboard);
         }),
     [tapToHideKeyboard],
   );

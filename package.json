@@ -33,7 +33,13 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./scheduleOnReactNative": {
+      "types": "./dist/scheduleOnReactNative.d.ts",
+      "react-native": "./dist/scheduleOnReactNative.js",
+      "import": "./dist/scheduleOnReactNative.js",
+      "default": "./dist/scheduleOnReactNative.js"
+    }
   },
   "files": [
     "dist",
@@ -49,8 +55,8 @@
     "prepublishOnly": "pnpm release:check",
     "pretest:package": "pnpm build",
     "test:package": "jest tests/exports.test.ts tests/config-contract.test.ts tests/anchor-resolution.test.ts --runInBand",
-    "test:unit": "jest tests/remediation.test.ts tests/benchmark-data.test.ts tests/sticky-tab-demo.test.ts tests/release-workflow.test.ts tests/runonjs-contract.test.ts --runInBand",
-    "test:component": "jest tests/components tests/benchmark-controls.test.tsx --runInBand",
+    "test:unit": "jest tests/remediation.test.ts tests/benchmark-data.test.ts tests/sticky-tab-demo.test.ts tests/release-workflow.test.ts tests/runonjs-contract.test.ts tests/schedule-on-rn.test.ts tests/worklets-usage-scan.test.ts --runInBand",
+    "test:component": "jest tests/components tests/decay-boundary.test.tsx tests/benchmark-controls.test.tsx --runInBand",
     "test": "pnpm test:package && pnpm test:unit && pnpm test:component",
     "typecheck": "tsc --noEmit",
     "typecheck:example": "pnpm --dir example exec tsc --noEmit",
