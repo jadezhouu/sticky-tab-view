@@ -36,9 +36,10 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-# generated native folders
-/ios
-/android
+# Expo example 的 CNG 生成目录（prebuild --clean 后 regenerate）
+# 注意：只忽略 example/ 下的生成物；fixtures/rn-081/android|ios 是提交的锚点原生工程，不能忽略。
+/example/ios
+/example/android
 
 # npm (use pnpm)
 package-lock.json

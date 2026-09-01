@@ -1,0 +1,124 @@
+name: V1 Tag Validation
+
+# Reanimated 3 维护线的 `v1.*` tag 只验证、不发布 workflow（V3-6-04）。
+#
+# 用途：push v1.* tag 时立即校验 tag/version/维护分支可达性/签名/候选证据，
+# 在创建 GitHub Release 之前给出明确 validation check。发布仍只由 release.published
+# 触发 release.yml，本 workflow 不使用 npm-release environment，也不执行 npm publish。
+#
+# 机制（与维护指南第 11 节一致）：
+#   - 固定可信签名公钥 fingerprint；没有可信公钥时本 workflow fail-closed，
+#     不允许把 git verify-tag 写成可假通过的自动门禁（V3-6-04 第 3 点）。
+#   - 通过 GitHub Actions API 读取 v3-candidate-attestation artifact，
+#     核对 tag commit == 成功 candidate run 的 head_sha / candidate_sha。
+#   - 校验全部通过前，不得创建 GitHub Release（操作门禁由维护者执行）。
+
+on:
+  push:
+    tags:
+      - 'v1.*'
+
+permissions:
+  contents: read
+  actions: read # 读取 candidate attestation artifact
+
+env:
+  # 维护者签名公钥存放路径（人工在 Phase 8 放入，见 docs/reanimated3-native-builds.md）。
+  VERIFIER_KEY: .github/keys/reanimated3-maintainer.gpg.pub.asc
+  # 固定预期的公钥 fingerprint（十六进制指纹，人类任务填写；留空则 fail-closed）。
+  EXPECTED_FINGERPRINT: ''
+
+jobs:
+  validate-v1-tag:
+    name: V1 Tag Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Validate tag shape (v1.*)
+        run: |
+          REF="${{ github.ref }}"
+          echo "pushed ref: $REF"
+          case "$REF" in
+            refs/tags/v1.*) echo "tag shape OK" ;;
+            *) echo "::error::expected v1.* tag, got $REF"; exit 1 ;;
+          esac
+
+      - name: Validate tag is annotated and exists as tag object
+        run: |
+          TAG_OBJ="$(git rev-parse "${{ github.ref }}")"
+          if [ "$(git cat-file -t "$TAG_OBJ")" != "tag" ]; then
+            echo "::error::v1.* 发布 tag 必须是 annotated 签名 tag（got ${{ github.ref }} → $TAG_OBJ）"
+            exit 1
+          fi
+          echo "tag_object=$TAG_OBJ" >> "$GITHUB_ENV"
+          echo "tag_commit=$(git rev-parse "$TAG_OBJ^{commit}")" >> "$GITHUB_ENV"
+
+      - name: Validate package.json version matches tag
+        run: |
+          VERSION="$(node -p 'require("./package.json").version')"
+          EXPECTED="${GITHUB_REF_NAME#v}"
+          if [ "$VERSION" != "$EXPECTED" ]; then
+            echo "::error::package.json version ($VERSION) != tag version ($EXPECTED)"
+            exit 1
+          fi
+          echo "version match: $VERSION"
+
+      - name: Validate tag commit belongs to maintenance/reanimated-3
+        run: |
+          git fetch origin maintenance/reanimated-3:refs/remotes/origin/maintenance/reanimated-3 --depth=300
+          TAG_COMMIT="$(git rev-parse "${{ github.ref }}^{commit}")"
+          if ! git merge-base --is-ancestor "$TAG_COMMIT" origin/maintenance/reanimated-3; then
+            echo "::error::tag commit $TAG_COMMIT 不是 maintenance/reanimated-3 的祖先"
+            exit 1
+          fi
+          echo "tag reachable from maintenance/reanimated-3: OK"
+
+      - name: Verify GPG signature against pinned public key (fail-closed)
+        run: |
+          if [ ! -f "$VERIFIER_KEY" ]; then
+            echo "::error::缺少可信签名公钥：$VERIFIER_KEY（Phase 8 人工任务：放入维护者导出公钥）"
+            exit 1
+          fi
+          if [ -z "$EXPECTED_FINGERPRINT" ]; then
+            echo "::error::EXPECTED_FINGERPRINT 未填写，不能把 verify-tag 当可过的门禁"
+            exit 1
+          fi
+          gpg --homedir ./.gpg-tmp --batch --quiet --import "$VERIFIER_KEY" 2>/dev/null
+          FP="$(gpg --homedir ./.gpg-tmp --with-colons --fingerprint --import-options show-only --import "$VERIFIER_KEY" 2>/dev/null | awk -F: '$1=="fpr"{print $10}')"
+          if [ "$FP" != "$EXPECTED_FINGERPRINT" ]; then
+            echo "::error::公钥 fingerprint 不匹配：got $FP, want $EXPECTED_FINGERPRINT"
+            exit 1
+          fi
+          git -c gpg.program="$(command -v gpg)" verify-tag --raw "${{ github.ref_name }}"
+          echo "GPG signature OK (fingerprint $FP)"
+
+      - name: Verify tag commit matches candidate attestation head_sha
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG_COMMIT="$(git rev-parse "${{ github.ref }}^{commit}")"
+          ARTIFACT_ID="$(gh api "repos/${{ github.repository }}/actions/artifacts?per_page=50" --jq '[.artifacts[] | select(.name=="v3-candidate-attestation" and .expired==false)] | .[0].id // empty')"
+          if [ -z "$ARTIFACT_ID" ]; then
+            echo "::error::未找到 v3-candidate-attestation artifact：候选从未完成设备验证，禁止发布"
+            exit 1
+          fi
+          gh api "repos/${{ github.repository }}/actions/artifacts/$ARTIFACT_ID/zip" > /tmp/attestation.zip
+          cd /tmp && unzip -o -q attestation.zip
+          HEAD_SHA="$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/attestation/attestation.json","utf8")).head_sha')"
+          CAND_SHA="$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/attestation/attestation.json","utf8")).candidate_sha')"
+          echo "tag_commit=$TAG_COMMIT head_sha=$HEAD_SHA candidate_sha=$CAND_SHA"
+          if [ "$HEAD_SHA" != "$TAG_COMMIT" ] || [ "$CAND_SHA" != "$TAG_COMMIT" ]; then
+            echo "::error::tag commit 与成功 candidate run 的 head_sha/candidate_sha 不一致"
+            exit 1
+          fi
+          echo "candidate evidence aligned: OK"
+
+      - name: Summary
+        run: |
+          echo "V1 Tag Validation PASSED: ${{ github.ref_name }}"
+          echo "  tag_object=${{ env.tag_object }}"
+          echo "  tag_commit=${{ env.tag_commit }}"
