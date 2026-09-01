@@ -36,6 +36,19 @@
 prebuild 时写入 android `gradle.properties` 的 `newArchEnabled` 与 iOS Podfile 的
 `RCT_NEW_ARCH_ENABLED`。
 
+> **pnpm 前置**：Expo 的 gradle 自动链接（`expoAutolinking.useExpoModules()`）只包含
+> 在 app 根 `node_modules` 可解析的 expo 模块；pnpm 的隔离 `node_modules` 不会把
+> `expo` 的传递依赖 hoist 到根。因此 `example/package.json` 必须把下列 6 个带原生代码的
+> expo 模块声明为**直接依赖**（版本与 `expo@53.0.27` 的依赖声明一致）：
+> `expo-asset@~11.1.7`、`expo-constants@~17.1.8`、`expo-file-system@~18.1.11`、
+> `expo-font@~13.3.2`、`expo-keep-awake@~14.1.4`、`expo-modules-core@2.5.0`。
+> 缺失时 gradle 生成的 `PackageList.java` 会引用 `expo.core.ExpoModulesPackage` 等类，
+> 但对应 gradle 模块不在构建里，导致 `cannot find symbol`（V3-6-03 初次 CI 失败点）。
+> 另外本地若残留根 `node_modules/expo-modules-core` 等旧 SDK 的**真实目录**（非 pnpm
+> 符号链接），会 shadow 正确版本，需删除以保证与干净 CI 安装一致。
+
+
+
 **Android：**
 
 ```bash
