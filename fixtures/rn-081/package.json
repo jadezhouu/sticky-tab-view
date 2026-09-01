@@ -8,6 +8,7 @@
     "start": "react-native start"
   },
   "dependencies": {
+    "@babel/runtime": "^7.28.6",
     "@jadezhou/sticky-tab-view": "workspace:*",
     "react": "19.1.0",
     "react-native": "0.81.5",

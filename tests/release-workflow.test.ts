@@ -17,9 +17,13 @@ describe('release workflow recovery contract', () => {
 
   test('routes Reanimated 4 and Reanimated 3 releases to mutually exclusive jobs', () => {
     expect(workflow).toContain('publish-reanimated4:');
-    expect(workflow).toContain("if: ${{ startsWith(github.event.release.tag_name || inputs.tag, 'v2.') }}");
+    expect(workflow).toContain(
+      "if: ${{ startsWith(github.event.release.tag_name || inputs.tag, 'v2.') }}",
+    );
     expect(workflow).toContain('publish-reanimated3:');
-    expect(workflow).toContain("if: ${{ startsWith(github.event.release.tag_name || inputs.tag, 'v1.') }}");
+    expect(workflow).toContain(
+      "if: ${{ startsWith(github.event.release.tag_name || inputs.tag, 'v1.') }}",
+    );
     expect(workflow).not.toContain('if: startsWith(env.RELEASE_TAG');
   });
 
@@ -31,7 +35,9 @@ describe('release workflow recovery contract', () => {
 
   test('accepts Reanimated 3 releases only from the maintenance branch history', () => {
     expect(workflow).toContain('Verify Reanimated 3 maintenance branch');
-    expect(workflow).toContain('maintenance/reanimated-3:refs/remotes/origin/maintenance/reanimated-3');
+    expect(workflow).toContain(
+      'maintenance/reanimated-3:refs/remotes/origin/maintenance/reanimated-3',
+    );
     expect(workflow).toContain('git merge-base --is-ancestor HEAD origin/maintenance/reanimated-3');
   });
 });

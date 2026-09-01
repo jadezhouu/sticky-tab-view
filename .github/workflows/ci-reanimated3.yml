@@ -1,45 +1,25 @@
 name: CI Reanimated 3
 
-# Reanimated 3 兼容维护线的分级 CI（V3-6-03）。
+# Reanimated 3 兼容维护线的 PR/push 门禁（V3-6-03）。
 #
-# 触发范围：只对 maintenance/reanimated-3 分支生效，与 main 的 ci.yml 完全隔离。
-# 分级：
-#   - PR required（job 名称固定，不得重命名）：
-#       * 全部 JS/package/typecheck/tarball checks（v3-lint / v3-typecheck / v3-test / v3-build-pack）
-#       * Expo 53 Android Paper 原生构建（v3-expo-android-paper）
-#       * RN 0.81 Android Fabric 原生构建（v3-rn081-android-fabric）
-#   - nightly / workflow_dispatch：两锚点 × iOS/Android × Paper/Fabric 八个原生构建
-#   - release-candidate：必填 candidate_sha，checkout 并验证该不可变 SHA 属于
-#     maintenance/reanimated-3，在其上运行全八 build + registry-style consumer，
-#     人工设备完成后通过受保护输入 device_evidence_url 生成 attestation artifact。
-#     人工场景不允许被伪装成自动 job（V3-6-03 第 4 点）。
+# 本工作流只承载 maintenance/reanimated-3 的 required checks（PR/push）：
+#   * 全部 JS/package/typecheck/tarball checks（v3-lint / v3-typecheck / v3-test / v3-build-pack）
+#   * Expo 53 Android Paper 原生构建 + Metro bundle 门禁（v3-expo-android-paper）
+#   * RN 0.81 Android Fabric 原生构建 + Metro bundle 门禁（v3-rn081-android-fabric）
 #
-# 每个锚点记录 require.resolve / pnpm why --filter / native autolinking 输出，
-# 证明两个 workspace 各自解析到自己的 React/RN/Reanimated/RNGH，无错误 hoist。
+# nightly / release-candidate 的全八组合矩阵、candidate SHA 校验与 attestation
+# 统一由 main 上的 .github/workflows/v3-native-dispatcher.yml 编排（schedule 与
+# workflow_dispatch 只在默认分支生效），本文件不再重复——两处要同步演进，
+# 且 job 名称与 ruleset 21985323 的 required checks 保持一致，避免控制面漂移。
 #
-# 注意：schedule 只在默认分支（main）的工作流文件上生效；本工作流主要在
-# maintenance/reanimated-3 分支演进，因此 nightly 以 workflow_dispatch 为可靠入口；
-# schedule 触发时也会显式 checkout maintenance/reanimated-3 再跑。
+# 每个锚点在原生构建之外强制跑一次 Metro bundle：assembleDebug 不经过 Metro，
+# 只有 bundle 门禁能证明 JS 可被解析与转换（P0-06 / P1-05）。
 
 on:
   push:
     branches: [maintenance/reanimated-3]
   pull_request:
     branches: [maintenance/reanimated-3]
-  schedule:
-    - cron: '17 4 * * *' # 每天 04:17 UTC（避开整点）
-  workflow_dispatch:
-    inputs:
-      mode:
-        description: 'nightly ｜ release-candidate'
-        required: false
-        default: 'nightly'
-      candidate_sha:
-        description: 'Release candidate 不可变 SHA（release-candidate 必填）'
-        required: false
-      device_evidence_url:
-        description: '人工设备证据链接（release-candidate attestation 用）'
-        required: false
 
 permissions:
   contents: read
@@ -129,6 +109,8 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
       - run: pnpm install --frozen-lockfile
+      - name: Build library (dist for Metro bundle gate)
+        run: pnpm build
       - name: Record resolution evidence (Expo anchor)
         working-directory: example
         run: |
@@ -136,6 +118,11 @@ jobs:
           node -e 'for (const m of ["react-native","react-native-reanimated","react-native-gesture-handler","react"]) console.log(m, "->", require.resolve(m, { paths: ["./node_modules"] }))'
           echo "### pnpm why --filter sticky-tab-view-example"
           pnpm --filter sticky-tab-view-example why react-native-reanimated react-native-gesture-handler react-native react
+      - name: Export Expo bundle (Metro gate)
+        working-directory: example
+        env:
+          ARCH: paper
+        run: npx expo export --platform android --no-bytecode --output-dir .expo-export-gate
       - name: Prebuild Expo android (Paper)
         working-directory: example
         env:
@@ -164,6 +151,8 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
       - run: pnpm install --frozen-lockfile
+      - name: Build library (dist for Metro bundle gate)
+        run: pnpm build
       - name: Record resolution evidence (RN CLI anchor)
         working-directory: fixtures/rn-081
         run: |
@@ -173,158 +162,12 @@ jobs:
           pnpm --filter sticky-tab-view-fixture-rn081 why react-native-reanimated react-native-gesture-handler react-native react
           echo "### react-native config (autolinking)"
           npx react-native config | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=JSON.parse(s);console.log("deps:",Object.keys(d.dependencies||{}))})'
+      - name: Bundle fixture (Metro gate)
+        working-directory: fixtures/rn-081
+        run: pnpm exec react-native bundle --platform android --dev false --entry-file index.js --bundle-output /tmp/rn081.bundle --assets-dest /tmp/rn081-assets
       - name: Assert newArchEnabled=true
         working-directory: fixtures/rn-081
         run: grep -q '^newArchEnabled=true' android/gradle.properties
       - name: Build fixture android debug (Fabric)
         working-directory: fixtures/rn-081/android
         run: ./gradlew assembleDebug --no-daemon
-
-  # ────────────────────── 全八组合矩阵（nightly / manual） ─────────────────────
-
-  v3-native-matrix:
-    name: V3 Native ${{ matrix.anchor }} ${{ matrix.platform }} ${{ matrix.arch }}
-    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
-    runs-on: ${{ matrix.platform == 'ios' && 'macos-15' || 'ubuntu-latest' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { anchor: expo53,  platform: android, arch: paper }
-          - { anchor: expo53,  platform: android, arch: fabric }
-          - { anchor: expo53,  platform: ios,     arch: paper }
-          - { anchor: expo53,  platform: ios,     arch: fabric }
-          - { anchor: rn081,   platform: android, arch: paper }
-          - { anchor: rn081,   platform: android, arch: fabric }
-          - { anchor: rn081,   platform: ios,     arch: paper }
-          - { anchor: rn081,   platform: ios,     arch: fabric }
-    steps:
-      # release-candidate 锁定不可变 candidate_sha；其余（schedule/nightly）跑维护分支最新。
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'release-candidate' && github.event.inputs.candidate_sha || 'maintenance/reanimated-3' }}
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'pnpm'
-      - uses: actions/setup-java@v4
-        if: ${{ matrix.platform == 'android' }}
-        with:
-          distribution: 'temurin'
-          java-version: ${{ env.JAVA_VERSION }}
-      - name: Echo checkout SHA
-        run: git rev-parse HEAD
-      - run: pnpm install --frozen-lockfile
-      - name: Record resolution evidence (${{ matrix.anchor }})
-        working-directory: ${{ matrix.anchor == 'expo53' && 'example' || 'fixtures/rn-081' }}
-        run: |
-          echo "### require.resolve"
-          node -e 'for (const m of ["react-native","react-native-reanimated","react-native-gesture-handler","react"]) console.log(m, "->", require.resolve(m, { paths: ["./node_modules"] }))'
-          echo "### react-native config (autolinking)"
-          npx react-native config | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=JSON.parse(s);console.log("deps:",Object.keys(d.dependencies||{}))})'
-      - name: Prebuild (Expo, ${{ matrix.arch }})
-        if: ${{ matrix.anchor == 'expo53' }}
-        working-directory: example
-        env:
-          ARCH: ${{ matrix.arch }}
-        run: npx expo prebuild --clean --platform ${{ matrix.platform }} --no-install
-      - name: Set arch flag (RN CLI, ${{ matrix.arch }})
-        if: ${{ matrix.anchor == 'rn081' && matrix.platform == 'android' }}
-        working-directory: fixtures/rn-081
-        run: |
-          if [ "${{ matrix.arch }}" = "paper" ]; then sed -i.bak 's/^newArchEnabled=true/newArchEnabled=false/' android/gradle.properties; fi
-          grep '^newArchEnabled' android/gradle.properties
-      - name: Install iOS pods (RN CLI)
-        if: ${{ matrix.anchor == 'rn081' && matrix.platform == 'ios' }}
-        working-directory: fixtures/rn-081/ios
-        env:
-          RCT_NEW_ARCH_ENABLED: ${{ matrix.arch == 'fabric' && '1' || '0' }}
-        run: pod install
-      - name: Install iOS pods (Expo)
-        if: ${{ matrix.anchor == 'expo53' && matrix.platform == 'ios' }}
-        working-directory: example/ios
-        run: pod install
-      - name: Build Android (gradle, ${{ matrix.arch }})
-        if: ${{ matrix.platform == 'android' }}
-        working-directory: ${{ matrix.anchor == 'expo53' && 'example/android' || 'fixtures/rn-081/android' }}
-        run: ./gradlew assembleDebug --no-daemon
-      - name: Build iOS (xcodebuild, ${{ matrix.arch }})
-        if: ${{ matrix.platform == 'ios' }}
-        working-directory: ${{ matrix.anchor == 'expo53' && 'example/ios' || 'fixtures/rn-081/ios' }}
-        run: |
-          xcodebuild -workspace ${{ matrix.anchor == 'expo53' && 'StickyTabView.xcworkspace' || 'StickyTabViewFixture.xcworkspace' }} \
-            -scheme ${{ matrix.anchor == 'expo53' && 'StickyTabView' || 'StickyTabViewFixture' }} \
-            -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO build
-
-  # ─────────────────────────────── release-candidate ───────────────────────────
-
-  v3-release-candidate:
-    name: V3 Release Candidate (candidate_sha)
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'release-candidate' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Validate candidate_sha belongs to maintenance/reanimated-3
-        env:
-          CANDIDATE_SHA: ${{ github.event.inputs.candidate_sha }}
-        run: |
-          if [ -z "$CANDIDATE_SHA" ]; then echo "::error::release-candidate 模式必须提供 candidate_sha"; exit 1; fi
-          git fetch origin maintenance/reanimated-3 --depth=300
-          if ! git cat-file -t "$CANDIDATE_SHA" >/dev/null 2>&1; then
-            echo "::error::candidate_sha 不存在：$CANDIDATE_SHA"; exit 1
-          fi
-          if ! git merge-base --is-ancestor "$CANDIDATE_SHA" origin/maintenance/reanimated-3; then
-            echo "::error::candidate_sha 不是 maintenance/reanimated-3 的祖先：$CANDIDATE_SHA"; exit 1
-          fi
-          echo "candidate_sha validated: $CANDIDATE_SHA"
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.candidate_sha }}
-          clean: true
-      - name: Echo immutable candidate SHA
-        run: |
-          echo "head_sha=$(git rev-parse HEAD)"
-          test "$(git rev-parse HEAD)" = "${{ github.event.inputs.candidate_sha }}"
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm build
-      - name: Registry-style consumer (both anchors, external install)
-        run: pnpm smoke:consumer
-      - name: Record no-worklets evidence
-        run: |
-          echo "### pnpm why react-native-worklets（应为空）"
-          pnpm why react-native-worklets || echo "(no worklets in tree — OK)"
-          node -e 'const p=require("./node_modules/react-native-reanimated/package.json");console.log("reanimated resolved at root:",p.version)'
-
-  # 候选 attestation artifact（V3-6-03 第 4 点）：人工设备证据由受保护输入提供，
-  # 本 job 只把它与 candidate SHA/审批者/时间固化进 artifact，不伪装成自动设备测试。
-  v3-attestation:
-    name: V3 Candidate Attestation
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'release-candidate' && github.event.inputs.device_evidence_url != '' }}
-    runs-on: ubuntu-latest
-    needs: [v3-release-candidate]
-    permissions:
-      contents: read
-      actions: write
-    steps:
-      - name: Build attestation artifact
-        run: |
-          mkdir -p attestation
-          cat > attestation/attestation.json <<EOF
-          {
-            "candidate_sha": "${{ github.event.inputs.candidate_sha }}",
-            "head_sha": "${{ github.event.inputs.candidate_sha }}",
-            "device_evidence_url": "${{ github.event.inputs.device_evidence_url }}",
-            "approver": "${{ github.triggering_actor }}",
-            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          }
-          EOF
-          cat attestation/attestation.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: v3-candidate-attestation
-          path: attestation/attestation.json
-          if-no-files-found: error

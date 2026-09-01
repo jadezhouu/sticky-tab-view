@@ -1,10 +1,6 @@
-import {
-  AnimationCallback,
-  defineAnimation,
-  SharedValue,
-} from "react-native-reanimated";
+import { AnimationCallback, defineAnimation, SharedValue } from 'react-native-reanimated';
 
-type TFocus = SharedValue<boolean | "vertical" | "horizontal">;
+type TFocus = SharedValue<boolean | 'vertical' | 'horizontal'>;
 
 // Reanimated v3 中 WithDecayConfig (= DecayConfig) 是联合类型，无法用 interface extends，
 // 因此改为 type 交叉形式来附加 focus 字段。
@@ -37,15 +33,12 @@ interface InnerDecayAnimation {
   callback?: AnimationCallback;
 }
 
-export function withDecay(
-  userConfig: ExtendedDecayConfig,
-  callback?: AnimationCallback,
-): number {
-  "worklet";
+export function withDecay(userConfig: ExtendedDecayConfig, callback?: AnimationCallback): number {
+  'worklet';
   // 在 Reanimated v3 中 defineAnimation 返回 T (AnimationObject)，
   // 但 Reanimated 内部会把它当作 number 处理，需要在类型层面强制转换。
   return defineAnimation(0, () => {
-    "worklet";
+    'worklet';
     const config: ResolvedDecayConfig = {
       deceleration: 0.998,
       velocityFactor: 1,
@@ -66,9 +59,10 @@ export function withDecay(
       const factor = Math.pow(rate, deltaTime);
       // Sum the geometric series instead of integrating every millisecond.
       // This preserves the previous discrete physics while making a frame O(1).
-      const travelled = rate === 1
-        ? animation.velocity * config.velocityFactor * deltaTime / 1000
-        : animation.velocity * config.velocityFactor * rate * (1 - factor) / (1 - rate) / 1000;
+      const travelled =
+        rate === 1
+          ? (animation.velocity * config.velocityFactor * deltaTime) / 1000
+          : (animation.velocity * config.velocityFactor * rate * (1 - factor)) / (1 - rate) / 1000;
       animation.current += travelled;
       animation.velocity *= factor;
       animation.lastTimestamp = now;
@@ -76,10 +70,7 @@ export function withDecay(
         if (initialVelocity < 0 && animation.current <= config.clamp[0]) {
           animation.current = config.clamp[0];
           return true;
-        } else if (
-          initialVelocity > 0 &&
-          animation.current >= config.clamp[1]
-        ) {
+        } else if (initialVelocity > 0 && animation.current >= config.clamp[1]) {
           animation.current = config.clamp[1];
           return true;
         }
@@ -94,28 +85,18 @@ export function withDecay(
     function validateConfig(): void {
       if (config.clamp) {
         if (!Array.isArray(config.clamp)) {
-          throw Error(
-            `config.clamp must be an array but is ${typeof config.clamp}`,
-          );
+          throw Error(`config.clamp must be an array but is ${typeof config.clamp}`);
         }
         if (config.clamp.length !== 2) {
-          throw Error(
-            `clamp array must contain 2 items but is given ${config.clamp.length}`,
-          );
+          throw Error(`clamp array must contain 2 items but is given ${config.clamp.length}`);
         }
       }
       if (config.velocityFactor <= 0) {
-        throw Error(
-          `config.velocityFactor must be greater than 0 but is ${config.velocityFactor}`,
-        );
+        throw Error(`config.velocityFactor must be greater than 0 but is ${config.velocityFactor}`);
       }
     }
 
-    function onStart(
-      animation: InnerDecayAnimation,
-      value: number,
-      now: number,
-    ): void {
+    function onStart(animation: InnerDecayAnimation, value: number, now: number): void {
       animation.current = value;
       animation.lastTimestamp = now;
       animation.startTimestamp = now;

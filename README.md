@@ -39,7 +39,7 @@ Changelog: [CHANGELOG.md](./CHANGELOG.md) · [GitHub Releases](https://github.co
 
 ## Requirements
 
-- **Both New Architecture (Fabric) and Paper are supported** on the `1.x` line (each verified anchor is built in both architectures — see the compatibility matrix).
+- **New Architecture (Fabric) and Paper both build** on the `1.x` line, but only two representative Android combos are CI-verified today (Expo SDK 53 Paper, RN 0.81 Fabric). The full 8-combo matrix (× iOS/Android × Paper/Fabric) and device smoke are pending — **not yet a release contract**.
 - **No Worklets**: this line uses `react-native-reanimated@3`, whose worklet runtime is bundled — the separate `react-native-worklets` package must **not** be installed.
 - **Node.js `>=20.19.4`** is required for development and tooling.
 - This is an **ESM-only** package; no CommonJS build is provided.
@@ -89,12 +89,12 @@ Peer boundaries (conditional pairing — see "Known invalid" below):
 | `react-native-gesture-handler` | `>=2.24.0 <2.29.0` |
 | `react-native-reanimated`      | `>=3.17.4 <3.20.0` |
 
-**Verified anchors** — built in CI for both Paper and Fabric (device smoke pending):
+**Verified anchors** — two representative Android builds CI-verified (the full 8-combo matrix and device smoke are pending, **not yet a release contract**):
 
-| Anchor | React | React Native | RNGH     | Reanimated | Architectures |
-| ------ | ----- | ------------ | -------- | ---------- | -------------- |
-| Expo SDK 53 | 19.0.0 | 0.79.x | 2.24.x | 3.17.x | Paper + Fabric |
-| RN Community CLI | 19.1.0 | 0.81.x | 2.28.x | 3.19.x | Paper + Fabric |
+| Anchor | React | React Native | RNGH     | Reanimated | CI-verified (Android) |
+| ------ | ----- | ------------ | -------- | ---------- | ---------------------- |
+| Expo SDK 53 | 19.0.0 | 0.79.x | 2.24.x | 3.17.x | Paper |
+| RN Community CLI | 19.1.0 | 0.81.x | 2.28.x | 3.19.x | Fabric |
 
 **Upstream-compatible but unverified**: other combinations inside the peer ranges that
 Reanimated 3 supports upstream but this repository has not built/tested (e.g. RN 0.80 +

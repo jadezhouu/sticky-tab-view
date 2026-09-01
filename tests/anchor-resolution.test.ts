@@ -40,9 +40,7 @@ function workletsNotInstalled(workspaceDir: string): void {
   const direct = path.join(workspaceDir, 'node_modules', 'react-native-worklets');
   expect(fs.existsSync(direct)).toBe(false);
   // 同时断言 workspace 自身不得在任何依赖字段声明 worklets。
-  const pkg = JSON.parse(
-    fs.readFileSync(path.join(workspaceDir, 'package.json'), 'utf-8'),
-  );
+  const pkg = JSON.parse(fs.readFileSync(path.join(workspaceDir, 'package.json'), 'utf-8'));
   for (const field of ['dependencies', 'devDependencies', 'peerDependencies']) {
     expect(Object.keys(pkg[field] || {})).not.toContain('react-native-worklets');
   }

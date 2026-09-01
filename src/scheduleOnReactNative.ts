@@ -1,4 +1,4 @@
-import { runOnJS } from "react-native-reanimated";
+import { runOnJS } from 'react-native-reanimated';
 
 /**
  * 内部线程调度适配层（R3-003）。
