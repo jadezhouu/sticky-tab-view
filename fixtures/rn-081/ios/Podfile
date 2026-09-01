@@ -17,6 +17,18 @@ end
 target 'StickyTabViewFixture' do
   config = use_native_modules!
 
+  # pnpm monorepo：reactNativePath 是符号链接路径（<repo>/node_modules/react-native），
+  # CocoaPods 对符号链接路径 realdirpath 时，在 macOS arm64 + Ruby 3.3 上会把 pnpm store
+  # 段写成 NUL（CocoaPods#12798）。对齐 expo/expo#34203：用 node 的 fs.realpath 解析为真实路径，
+  # 让 CocoaPods 全程走真实路径，绕开 Ruby realdirpath 的损坏。
+  # 注意：use_react_native! 内部用 File.join(installation_root, path) 拼包路径，绝对路径会被
+  # 拼成 ./<abs> 而找不到 package.json，所以必须把 realpath 转成相对 Podfile 目录的相对路径
+  # （与 autolinking 生成的 ../node_modules/... 同风格）。
+  __rn_real = `node -p 'require("fs").realpathSync(require("path").dirname(require.resolve("react-native", {paths: [process.argv[1]]})))' "#{File.dirname(__FILE__)}"`.strip
+  unless __rn_real.empty?
+    config[:reactNativePath] = Pathname.new(__rn_real).relative_path_from(Pathname.new(File.dirname(__FILE__))).to_s
+  end
+
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.
