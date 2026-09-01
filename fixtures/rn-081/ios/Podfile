@@ -24,9 +24,18 @@ target 'StickyTabViewFixture' do
   # 注意：use_react_native! 内部用 File.join(installation_root, path) 拼包路径，绝对路径会被
   # 拼成 ./<abs> 而找不到 package.json，所以必须把 realpath 转成相对 Podfile 目录的相对路径
   # （与 autolinking 生成的 ../node_modules/... 同风格）。
-  __rn_real = `node -p 'require("fs").realpathSync(require("path").dirname(require.resolve("react-native", {paths: [process.argv[1]]})))' "#{File.dirname(__FILE__)}"`.strip
-  unless __rn_real.empty?
-    config[:reactNativePath] = Pathname.new(__rn_real).relative_path_from(Pathname.new(File.dirname(__FILE__))).to_s
+  # 与文件顶部一致用 Pod::Executable.execute_command 执行 node（数组参数，不经 shell）：
+  # node 解析失败会抛错 fail-fast，而不是像 backticks 那样静默返回空串回退到符号链接路径
+  # （P1-02）；随后仍校验 realpath 目录存在 package.json，失败只告警、保留 autolinked 值。
+  __rn_real = Pod::Executable.execute_command('node', ['-p',
+    'require("fs").realpathSync(require("path").dirname(require.resolve("react-native", {paths: [process.argv[1]]})))',
+    File.dirname(__FILE__)]).strip
+  __rn_abs = File.expand_path(__rn_real, File.dirname(__FILE__))
+  __rn_pkg = File.join(__rn_abs, 'package.json')
+  if File.directory?(__rn_abs) && File.exist?(__rn_pkg)
+    config[:reactNativePath] = Pathname.new(__rn_abs).relative_path_from(Pathname.new(File.dirname(__FILE__))).to_s
+  else
+    Pod::UI.warn "[sticky-tab-view fixture] reactNativePath realpath unusable: #{__rn_abs.inspect}; keeping autolinked path"
   end
 
   use_react_native!(

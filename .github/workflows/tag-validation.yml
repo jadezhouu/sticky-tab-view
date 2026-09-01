@@ -11,10 +11,14 @@ name: V1 Tag Validation
 #     不允许把 git verify-tag 写成可假通过的自动门禁（V3-6-04 第 3 点）。
 #     所有 gpg 操作（导入 + git verify-tag）共用 GNUPGHOME，保证验证用的就是
 #     导入这张公钥的 keyring（P0-04）。
-#   - 通过 GitHub Actions API 定位 v3-native-dispatcher.yml 上 head_sha == tag commit
-#     的成功 release-candidate run，按 `<short-sha>-<run-id>` 计算并下载
-#     v3-candidate-attestation artifact，核对 candidate_sha == head_sha == tag commit
-#     且 workflow_run_id == 该 run id（P1-03：不再按“最新同名 artifact”模糊匹配）。
+#   - dispatcher（main 上）的 workflow run head_sha 是默认分支 main 在触发时的 SHA，
+#     **不等于** job 内 checkout 的 candidate SHA（GitHub Actions 元数据语义）。因此本
+#     workflow 不按 head_sha 定位 run，而是从仓库 artifact 列表按 artifact 名前缀
+#     `v3-candidate-attestation-<candidate short-sha(12)>-` 反查唯一的 attestation（P0-01；
+#     artifact 名含 candidate short-sha + run id，每个 candidate 只产出一个 attestation）。
+#     下载后严格核对 candidate_sha == head_sha == tag commit、workflow_run_id ==
+#     artifact 所属 run id、matrix/gate conclusion == success、device_evidence_url 为
+#     https（不再按“最新同名 artifact”模糊匹配，也不把 run head_sha 当 candidate）。
 #   - 校验全部通过前，不得创建 GitHub Release（操作门禁由维护者执行）。
 
 on:
@@ -112,37 +116,57 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG_COMMIT="$(git rev-parse "${{ github.ref }}^{commit}")"
-          SHORT_SHA="${TAG_COMMIT:0:8}"
+          # 与 v3-native-dispatcher.yml 的 short_sha 输出对齐：candidate SHA 前 12 位。
+          SHORT_SHA="${TAG_COMMIT:0:12}"
+          ARTIFACT_PREFIX="v3-candidate-attestation-${SHORT_SHA}-"
 
-          # 定位 v3-native-dispatcher.yml 上 head_sha == tag commit 的
-          # 成功 workflow_dispatch run（release-candidate 模式，P1-03）。
-          RUN_JSON="$(gh api "repos/${{ github.repository }}/actions/workflows/v3-native-dispatcher.yml/runs?head_sha=$TAG_COMMIT&status=success&event=workflow_dispatch&per_page=100" --jq '.workflow_runs[0]')"
-          if [ -z "$RUN_JSON" ] || [ "$RUN_JSON" = "null" ]; then
-            echo "::error::未找到 head_sha == $TAG_COMMIT 的成功 v3-native-dispatcher run（release-candidate 未完成，禁止发布）"
+          # 不按 run head_sha 定位（dispatcher run 的 head_sha 是 main，不等于 candidate）。
+          # 从仓库 artifact 列表按名称前缀反查唯一 attestation；artifact 名 = 前缀 + run id，
+          # 一个 candidate 只会产出一个 attestation（--paginate 跨页取全，--jq 逐页过滤）。
+          SELECTED="$(gh api "repos/${{ github.repository }}/actions/artifacts?per_page=100" --paginate \
+            --jq '.artifacts[] | select(.expired==false and (.name | startswith("'"$ARTIFACT_PREFIX"'")))' \
+            | node -e '
+                let s = "";
+                process.stdin.on("data", d => { s += d; });
+                process.stdin.on("end", () => {
+                  const items = s.trim().split("\n").filter(Boolean).map(l => JSON.parse(l));
+                  if (!items.length) { process.exit(0); }
+                  items.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+                  console.log(JSON.stringify(items[0]));
+                });
+              ')"
+          if [ -z "$SELECTED" ]; then
+            echo "::error::未找到前缀 $ARTIFACT_PREFIX 的 v3 candidate attestation artifact（release-candidate 未完成，禁止发布）"
             exit 1
           fi
-          RUN_ID="$(printf '%s' "$RUN_JSON" | node -p 'JSON.parse(require("fs").readFileSync(0,"utf8")).id')"
-          echo "matched run_id: $RUN_ID (head_sha=$TAG_COMMIT)"
+          ARTIFACT_ID="$(printf '%s' "$SELECTED" | node -p 'JSON.parse(require("fs").readFileSync(0,"utf8")).id')"
+          RUN_ID="$(printf '%s' "$SELECTED" | node -p 'String(JSON.parse(require("fs").readFileSync(0,"utf8")).workflow_run.id)')"
+          echo "matched artifact: $ARTIFACT_PREFIX$RUN_ID (artifact_id=$ARTIFACT_ID run_id=$RUN_ID)"
 
-          EXPECTED_ARTIFACT="v3-candidate-attestation-${SHORT_SHA}-${RUN_ID}"
-          ARTIFACT_ID="$(gh api "repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts?per_page=100" --jq ".artifacts[] | select(.expired==false and .name==\"$EXPECTED_ARTIFACT\") | .id" | head -1)"
-          if [ -z "$ARTIFACT_ID" ]; then
-            echo "::error::run $RUN_ID 上没有 $EXPECTED_ARTIFACT artifact：候选设备证据未固化，禁止发布"
-            exit 1
-          fi
           gh api "repos/${{ github.repository }}/actions/artifacts/$ARTIFACT_ID/zip" > /tmp/attestation.zip
           rm -rf /tmp/attestation && mkdir -p /tmp/attestation && cd /tmp/attestation && unzip -o -q /tmp/attestation.zip
 
           CAND_SHA="$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/attestation/attestation.json","utf8")).candidate_sha')"
           HEAD_SHA="$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/attestation/attestation.json","utf8")).head_sha')"
           ATTEST_RUN_ID="$(node -p 'String(JSON.parse(require("fs").readFileSync("/tmp/attestation/attestation.json","utf8")).workflow_run_id)')"
-          echo "tag_commit=$TAG_COMMIT candidate_sha=$CAND_SHA head_sha=$HEAD_SHA workflow_run_id=$ATTEST_RUN_ID"
+          MATRIX_CONCL="$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/attestation/attestation.json","utf8")).matrix_conclusion')"
+          GATE_CONCL="$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/attestation/attestation.json","utf8")).candidate_gate_conclusion')"
+          DEVICE_URL="$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/attestation/attestation.json","utf8")).device_evidence_url')"
+          echo "tag_commit=$TAG_COMMIT candidate_sha=$CAND_SHA head_sha=$HEAD_SHA run_id=$RUN_ID workflow_run_id=$ATTEST_RUN_ID"
           if [ "$CAND_SHA" != "$TAG_COMMIT" ] || [ "$HEAD_SHA" != "$TAG_COMMIT" ]; then
             echo "::error::tag commit 与 attestation 的 candidate_sha/head_sha 不一致"
             exit 1
           fi
           if [ "$ATTEST_RUN_ID" != "$RUN_ID" ]; then
-            echo "::error::attestation 的 workflow_run_id（$ATTEST_RUN_ID）与定位到的 run（$RUN_ID）不一致"
+            echo "::error::attestation 的 workflow_run_id（$ATTEST_RUN_ID）与 artifact 所属 run（$RUN_ID）不一致"
+            exit 1
+          fi
+          if [ "$MATRIX_CONCL" != "success" ] || [ "$GATE_CONCL" != "success" ]; then
+            echo "::error::attestation 记录的全八矩阵/JS gate 结论不是 success（matrix=$MATRIX_CONCL gate=$GATE_CONCL）"
+            exit 1
+          fi
+          if [[ ! "$DEVICE_URL" =~ ^https:// ]]; then
+            echo "::error::attestation 的设备证据链接必须是 https://（got $DEVICE_URL）"
             exit 1
           fi
           echo "candidate evidence aligned (run-bound): OK"

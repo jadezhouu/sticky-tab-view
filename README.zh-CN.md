@@ -38,9 +38,10 @@
 
 ## 环境要求
 
-- **新架构（Fabric）与 Paper 都能构建**，但本仓库目前只在 CI 中验证了两个有代表性的
-  Android 组合（Expo SDK 53 Paper、RN 0.81 Fabric）。全八组合矩阵（× iOS/Android ×
-  Paper/Fabric）与设备冒烟尚未完成 —— **还不是发布契约**。
+- **新架构（Fabric）与 Paper 都能构建**。全八组合原生矩阵（Expo SDK 53 与 RN 0.81 ×
+  iOS/Android × Paper/Fabric）已通过 main 上的 `v3-native-dispatcher` release-candidate
+  运行在 CI 验证 —— 自动构建覆盖完整。设备/UI 运行时冒烟（手势、滚动、回收、下拉刷新、
+  前后台）仍待进行，是发布契约前的最后一道门禁。
 - **无 Worklets**：本线使用 `react-native-reanimated@3`，其 worklet 运行时已内置于
   Reanimated 3，独立的 `react-native-worklets` 包**不得**安装。
 - 开发与工具链需 **Node.js `>=20.19.4`**。
@@ -94,13 +95,14 @@ Peer 边界（条件配对 —— 见下方"已知无效"）：
 | `react-native-gesture-handler` | `>=2.24.0 <2.29.0` |
 | `react-native-reanimated`      | `>=3.17.4 <3.20.0` |
 
-**已验证锚点** —— CI 中验证了两个有代表性的 Android 构建（全八组合矩阵与设备冒烟
-尚未完成，**还不是发布契约**）：
+**已验证锚点** —— 全八组合原生矩阵（每个锚点 × iOS/Android × Paper/Fabric）已通过
+`v3-native-dispatcher` 的 release-candidate 运行在 CI 验证。设备/UI 运行时冒烟仍待进行，
+是发布契约前的最后一道门禁。
 
-| 锚点              | React   | React Native | RNGH   | Reanimated | CI 已验证（Android） |
-| ----------------- | ------- | ------------ | ------ | ---------- | --------------------- |
-| Expo SDK 53       | 19.0.0  | 0.79.x       | 2.24.x | 3.17.x     | Paper                 |
-| RN Community CLI  | 19.1.0  | 0.81.x       | 2.28.x | 3.19.x     | Fabric                |
+| 锚点              | React   | React Native | RNGH   | Reanimated | CI 已验证（原生）         |
+| ----------------- | ------- | ------------ | ------ | ---------- | ------------------------- |
+| Expo SDK 53       | 19.0.0  | 0.79.x       | 2.24.x | 3.17.x     | iOS + Android, Paper + Fabric |
+| RN Community CLI  | 19.1.0  | 0.81.x       | 2.28.x | 3.19.x     | iOS + Android, Paper + Fabric |
 
 **上游兼容但未验证**：peer 范围内 Reanimated 3 上游支持、但本仓库尚未构建/测试的其他
 组合（如 RN 0.80 + Reanimated 3.18）。预期可用，但不在 CI 或发布契约覆盖之内。

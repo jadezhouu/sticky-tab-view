@@ -75,3 +75,33 @@ describe('Reanimated 3 release line rejects Worklets (control plane gate)', () =
     expect(blockStep).toContain('::error::');
   });
 });
+
+describe('v3 tag-validation ↔ dispatcher integration contract (P0-01)', () => {
+  const tagValidation = readFileSync(
+    resolve(process.cwd(), '.github/workflows/tag-validation.yml'),
+    'utf8',
+  );
+
+  test('locates the attestation by artifact name, never by run head_sha (P0-01)', () => {
+    // dispatcher run 的 head_sha 是默认分支 main 的 SHA，永远不等于 candidate/tag commit；
+    // 消费端绝不能再用 head_sha == tag commit 查询 run。
+    expect(tagValidation).not.toContain('head_sha=$TAG_COMMIT');
+    // 生产端（main:v3-native-dispatcher.yml）与消费端统一使用 candidate 前 12 位 short SHA。
+    expect(tagValidation).toContain('TAG_COMMIT:0:12');
+    expect(tagValidation).toContain('ARTIFACT_PREFIX="v3-candidate-attestation-${SHORT_SHA}-"');
+  });
+
+  test('validates candidate_sha == head_sha == tag commit and run-bound id (P0-01)', () => {
+    expect(tagValidation).toContain('"$CAND_SHA" != "$TAG_COMMIT"');
+    expect(tagValidation).toContain('"$HEAD_SHA" != "$TAG_COMMIT"');
+    expect(tagValidation).toContain('workflow_run_id');
+    expect(tagValidation).toContain('"$ATTEST_RUN_ID" != "$RUN_ID"');
+  });
+
+  test('requires green matrix/gate conclusions and https device evidence (P0-01)', () => {
+    expect(tagValidation).toContain('matrix_conclusion');
+    expect(tagValidation).toContain('candidate_gate_conclusion');
+    expect(tagValidation).toContain('!= "success"');
+    expect(tagValidation).toContain('^https://');
+  });
+});
