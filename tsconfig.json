@@ -12,7 +12,13 @@
     "target": "es2020",
     "lib": ["ES2020", "DOM"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      // ts-jest 类型检查不应用 jest moduleNameMapper（纯 TS 解析），
+      // 且 @jadezhou/sticky-tab-view 只存在于 example/node_modules 的 symlink。
+      // 这两个路径让测试的类型检查不再依赖 dist 产物，环境无关地解析到源码。
+      // 构建/typecheck（src 内部用相对导入）不受影响。
+      "@jadezhou/sticky-tab-view/scheduleOnReactNative": ["./src/scheduleOnReactNative.ts"],
+      "@jadezhou/sticky-tab-view": ["./src/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]
