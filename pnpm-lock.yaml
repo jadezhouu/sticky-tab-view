@@ -142,6 +142,9 @@ importers:
       babel-preset-expo:
         specifier: ~13.2.5
         version: 13.2.5(@babel/core@7.29.0)
+      expo-modules-autolinking:
+        specifier: 2.1.15
+        version: 2.1.15
 
   fixtures/rn-081:
     dependencies:
