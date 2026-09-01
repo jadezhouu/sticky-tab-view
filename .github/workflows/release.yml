@@ -35,6 +35,7 @@ env:
 permissions:
   contents: read
   id-token: write
+  checks: read # 发布前核对 V1 Tag Validation check（P0-04：发布不能绕过 tag 验证）
 
 concurrency:
   # 同一 tag 的并发发布保护：发布是低频高风险操作，禁止并发覆盖。
@@ -92,9 +93,8 @@ jobs:
       # 不缓存依赖：发布是低频、高风险操作，始终从锁文件干净安装。
       - run: pnpm install --frozen-lockfile
 
-      # 发布前运行统一 release check 与真实 tarball 消费 smoke，任一失败即阻断发布。
+      # 发布前运行统一 release check（release:check 已包含真实 tarball 消费 smoke），失败即阻断发布。
       - run: pnpm release:check
-      - run: pnpm smoke:consumer
 
       # 版本策略校验：tag 与 package.json 一致，且必须属于当前 2.x 发布线。
       - name: Verify version policy
@@ -167,6 +167,27 @@ jobs:
             exit 1
           fi
 
+      # P0-04：npm publish 前必须在 HEAD（tag commit）上确认 V1 Tag Validation check
+      # 成功。该 check 由 tag-validation.yml 在发布 tag 时执行，负责核对 GPG 签名、
+      # 维护者指纹与 run-bound candidate attestation artifact；这里没有通过即禁止发布，
+      # 防止 release.yml 变成绕过 tag 验证的发布入口。
+      - name: Require V1 Tag Validation check success
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG_COMMIT="$(git rev-parse HEAD^{commit})"
+          RUNS_JSON="$(gh api "repos/${{ github.repository }}/commits/$TAG_COMMIT/check-runs" --jq '.check_runs')"
+          STATUS="$(printf '%s' "$RUNS_JSON" | node -e '
+            const runs = JSON.parse(require("fs").readFileSync(0, "utf8"));
+            const r = runs.find(r => r.name === "V1 Tag Validation");
+            console.log(r ? (r.status === "completed" ? `completed/${r.conclusion}` : r.status) : "missing");
+          ')"
+
+          case "$STATUS" in
+            completed/success) echo "V1 Tag Validation check: $STATUS (commit $TAG_COMMIT)";;
+            *) echo "::error::V1 Tag Validation 未通过（got $STATUS），禁止发布 $RELEASE_TAG"; exit 1;;
+          esac
+
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -184,7 +205,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm release:check
-      - run: pnpm smoke:consumer
 
       - name: Verify Reanimated 3 version policy
         run: |

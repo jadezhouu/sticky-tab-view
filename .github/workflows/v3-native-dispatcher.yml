@@ -1,0 +1,270 @@
+name: V3 Native Dispatcher
+
+# Reanimated 3 兼容维护线的全八组合矩阵与 release-candidate attestation 编排器（P0-01）。
+#
+# 为什么放在 main：
+#   - schedule / workflow_dispatch 只在默认分支（main）的工作流文件上生效；
+#     maintenance/reanimated-3 上的同名触发永远不会被 GitHub 派发。
+#   - 本工作流是 v3 线的“控制面”，只做编排与 gate；真正的 PR 级校验仍在
+#     maintenance/reanimated-3 的 ci-reanimated3.yml（ruleset 21985323 的 7 个 required check）。
+#
+# 模式：
+#   - nightly（schedule 或 workflow_dispatch mode=nightly）：
+#       解析 maintenance/reanimated-3 最新 HEAD → JS/package gate（release:check）+
+#       全八组合原生矩阵 + Metro bundle gate。不做 attestation。
+#   - release-candidate（workflow_dispatch mode=release-candidate）：
+#       必须提供 candidate_sha（release 用的不可变 SHA），校验它属于
+#       maintenance/reanimated-3 后，所有 job 都 checkout 该 SHA 执行相同 gate。
+#       人工设备证据通过受保护输入 device_evidence_url 提供，v3-attestation 在
+#       js-gate + 全八矩阵全部成功后，把 candidate SHA / 结论 / 审批者固化进
+#       attestation artifact（P0-03：attestation 依赖完整矩阵，且不伪装成自动设备测试）。
+#
+# 安全性（P0-02）：v3-resolve-candidate 先 checkout maintenance/reanimated-3 再跑 git 校验，
+# 任何 job 都不会在 checkout 之前执行 git 命令。candidate_sha 校验与 merge-base 祖先检查
+# 都在第一个 job 内完成，下游全部 checkout 同一个不可变 SHA。
+
+on:
+  schedule:
+    - cron: '17 4 * * *' # 每天 04:17 UTC（避开整点）
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'nightly ｜ release-candidate'
+        required: false
+        default: 'nightly'
+        type: choice
+        options:
+          - nightly
+          - release-candidate
+      candidate_sha:
+        description: 'Release candidate 不可变 SHA（release-candidate 必填）'
+        required: false
+        type: string
+      device_evidence_url:
+        description: '人工设备证据链接（release-candidate attestation 用）'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  id-token: none
+
+concurrency:
+  # release-candidate 是受保护的发布前 gate，绝不能被 nightly 取消（P0-03）。
+  group: v3-dispatcher-${{ inputs.mode || 'nightly' }}
+  cancel-in-progress: ${{ inputs.mode != 'release-candidate' }}
+
+env:
+  JAVA_VERSION: '17'
+
+jobs:
+  # ─────────────────────── 解析并锁定候选 SHA（P0-02） ───────────────────────
+
+  v3-resolve-candidate:
+    name: Resolve candidate SHA
+    runs-on: ubuntu-latest
+    outputs:
+      candidate_sha: ${{ steps.resolve.outputs.candidate_sha }}
+      short_sha: ${{ steps.resolve.outputs.short_sha }}
+    steps:
+      # 先 checkout 维护分支（fetch-depth: 0 拿到全历史），再执行任何 git 校验。
+      - uses: actions/checkout@v4
+        with:
+          ref: maintenance/reanimated-3
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Validate / resolve candidate SHA
+        id: resolve
+        env:
+          MODE: ${{ inputs.mode }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        run: |
+          git fetch origin maintenance/reanimated-3
+          if [[ "$MODE" == "release-candidate" ]]; then
+            if [[ -z "$CANDIDATE_SHA" ]]; then
+              echo "::error::release-candidate 模式必须提供 candidate_sha"
+              exit 1
+            fi
+            if ! git cat-file -t "$CANDIDATE_SHA" >/dev/null 2>&1; then
+              echo "::error::candidate_sha 不存在：$CANDIDATE_SHA"
+              exit 1
+            fi
+            if ! git merge-base --is-ancestor "$CANDIDATE_SHA" origin/maintenance/reanimated-3; then
+              echo "::error::candidate_sha 不是 maintenance/reanimated-3 的祖先：$CANDIDATE_SHA"
+              exit 1
+            fi
+            SHA="$CANDIDATE_SHA"
+            echo "resolved candidate (release-candidate): $SHA"
+          else
+            SHA="$(git rev-parse origin/maintenance/reanimated-3)"
+            echo "resolved maintenance head (nightly): $SHA"
+          fi
+          echo "candidate_sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHA:0:12}" >> "$GITHUB_OUTPUT"
+
+  # ─────────────────────── 统一 JS/package gate（P1-04） ──────────────────────
+
+  v3-js-gate:
+    name: JS/package gate (release:check)
+    runs-on: ubuntu-latest
+    needs: [v3-resolve-candidate]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.v3-resolve-candidate.outputs.candidate_sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      # 统一 gate：lint + typecheck + 全量测试 + build + typecheck:example/fixture +
+      # npm pack --dry-run + verify:reanimated3 + smoke:consumer。
+      - run: pnpm release:check
+      - name: Record no-worklets evidence
+        run: |
+          echo "### pnpm why react-native-worklets（应为空）"
+          pnpm why react-native-worklets || echo "(no worklets in tree — OK)"
+          node -e 'const p=require("./node_modules/react-native-reanimated/package.json");console.log("reanimated resolved at root:",p.version)'
+
+  # ─────────────────── 全八组合原生矩阵 + Metro bundle gate（P1-05） ───────────────────
+
+  v3-native-matrix:
+    name: V3 Native ${{ matrix.anchor }} ${{ matrix.platform }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.platform == 'ios' && 'macos-15' || 'ubuntu-latest' }}
+    needs: [v3-resolve-candidate]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { anchor: expo53, platform: android, arch: paper }
+          - { anchor: expo53, platform: android, arch: fabric }
+          - { anchor: expo53, platform: ios, arch: paper }
+          - { anchor: expo53, platform: ios, arch: fabric }
+          - { anchor: rn081, platform: android, arch: paper }
+          - { anchor: rn081, platform: android, arch: fabric }
+          - { anchor: rn081, platform: ios, arch: paper }
+          - { anchor: rn081, platform: ios, arch: fabric }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.v3-resolve-candidate.outputs.candidate_sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - uses: actions/setup-java@v4
+        if: ${{ matrix.platform == 'android' }}
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: Echo checkout SHA
+        run: git rev-parse HEAD
+      - run: pnpm install --frozen-lockfile
+      # Metro bundle gate 消费 dist/，先 build 库产物。
+      - run: pnpm build
+      - name: Record resolution evidence (${{ matrix.anchor }})
+        working-directory: ${{ matrix.anchor == 'expo53' && 'example' || 'fixtures/rn-081' }}
+        run: |
+          echo "### require.resolve"
+          node -e 'for (const m of ["react-native","react-native-reanimated","react-native-gesture-handler","react"]) console.log(m, "->", require.resolve(m, { paths: ["./node_modules"] }))'
+          echo "### react-native config (autolinking)"
+          npx react-native config | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=JSON.parse(s);console.log("deps:",Object.keys(d.dependencies||{}))})'
+      # Metro bundle gate（P1-05）：assembleDebug 不打包 JS，这里强制证明 Metro 能 bundle。
+      - name: Metro bundle gate (Expo anchor)
+        if: ${{ matrix.anchor == 'expo53' }}
+        working-directory: example
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: npx expo export --platform android --no-bytecode --output-dir .expo-export-gate
+      - name: Metro bundle gate (RN CLI anchor)
+        if: ${{ matrix.anchor == 'rn081' }}
+        working-directory: fixtures/rn-081
+        run: pnpm exec react-native bundle --platform android --dev false --entry-file index.js --bundle-output /tmp/rn081.bundle --assets-dest /tmp/rn081-assets
+      - name: Prebuild (Expo, ${{ matrix.arch }})
+        if: ${{ matrix.anchor == 'expo53' }}
+        working-directory: example
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: npx expo prebuild --clean --platform ${{ matrix.platform }} --no-install
+      - name: Set arch flag (RN CLI, ${{ matrix.arch }})
+        if: ${{ matrix.anchor == 'rn081' && matrix.platform == 'android' }}
+        working-directory: fixtures/rn-081
+        run: |
+          if [ "${{ matrix.arch }}" = "paper" ]; then sed -i.bak 's/^newArchEnabled=true/newArchEnabled=false/' android/gradle.properties; fi
+          grep '^newArchEnabled' android/gradle.properties
+      - name: Install iOS pods (RN CLI)
+        if: ${{ matrix.anchor == 'rn081' && matrix.platform == 'ios' }}
+        working-directory: fixtures/rn-081/ios
+        env:
+          RCT_NEW_ARCH_ENABLED: ${{ matrix.arch == 'fabric' && '1' || '0' }}
+        run: pod install
+      - name: Install iOS pods (Expo)
+        if: ${{ matrix.anchor == 'expo53' && matrix.platform == 'ios' }}
+        working-directory: example/ios
+        run: pod install
+      - name: Build Android (gradle, ${{ matrix.arch }})
+        if: ${{ matrix.platform == 'android' }}
+        working-directory: ${{ matrix.anchor == 'expo53' && 'example/android' || 'fixtures/rn-081/android' }}
+        run: ./gradlew assembleDebug --no-daemon
+      - name: Build iOS (xcodebuild, ${{ matrix.arch }})
+        if: ${{ matrix.platform == 'ios' }}
+        working-directory: ${{ matrix.anchor == 'expo53' && 'example/ios' || 'fixtures/rn-081/ios' }}
+        run: |
+          xcodebuild -workspace ${{ matrix.anchor == 'expo53' && 'StickyTabView.xcworkspace' || 'StickyTabViewFixture.xcworkspace' }} \
+            -scheme ${{ matrix.anchor == 'expo53' && 'StickyTabView' || 'StickyTabViewFixture' }} \
+            -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
+
+  # ─────────────────── 候选 attestation artifact（P0-03） ───────────────────
+
+  # 只做固化：人工设备证据由受保护输入提供，本 job 把 candidate SHA / 结论 / 审批者
+  # 写进 artifact，不伪装成自动设备测试。needs 全链成功才会运行。
+  v3-attestation:
+    name: V3 Candidate Attestation
+    if: ${{ inputs.mode == 'release-candidate' && inputs.device_evidence_url != '' }}
+    runs-on: ubuntu-latest
+    needs: [v3-resolve-candidate, v3-js-gate, v3-native-matrix]
+    # 受保护 environment：人工在 Phase 8 添加 required reviewers 后才允许通过。
+    environment: v3-candidate-attestation
+    permissions:
+      # 仅本 job 需要 actions: write 写 artifact（最小权限，其余 job 仍是 read-only）。
+      contents: read
+      actions: write
+    steps:
+      - name: Validate device evidence URL
+        run: |
+          URL="${{ inputs.device_evidence_url }}"
+          if [[ ! "$URL" =~ ^https:// ]]; then
+            echo "::error::device_evidence_url 必须是 https:// 链接，got $URL"
+            exit 1
+          fi
+          echo "device evidence URL valid: $URL"
+      - name: Build attestation artifact
+        env:
+          CANDIDATE_SHA: ${{ needs.v3-resolve-candidate.outputs.candidate_sha }}
+          RUN_ID: ${{ github.run_id }}
+          APPROVER: ${{ github.triggering_actor }}
+          DEVICE_URL: ${{ inputs.device_evidence_url }}
+        run: |
+          mkdir -p attestation
+          cat > attestation/attestation.json <<EOF
+          {
+            "candidate_sha": "$CANDIDATE_SHA",
+            "head_sha": "$CANDIDATE_SHA",
+            "matrix_conclusion": "${{ needs.v3-native-matrix.result }}",
+            "candidate_gate_conclusion": "${{ needs.v3-js-gate.result }}",
+            "workflow_run_id": "$RUN_ID",
+            "device_evidence_url": "$DEVICE_URL",
+            "approver": "$APPROVER",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+          cat attestation/attestation.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v3-candidate-attestation-${{ needs.v3-resolve-candidate.outputs.short_sha }}-${{ github.run_id }}
+          path: attestation/attestation.json
+          if-no-files-found: error
