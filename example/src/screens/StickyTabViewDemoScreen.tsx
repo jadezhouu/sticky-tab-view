@@ -20,13 +20,14 @@ import {
   Image,
 } from "react-native";
 import Reanimated, {
-  runOnJS,
   SharedValue,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
+// 内部线程调度适配层（R3-003）：example 的 worklet→JS 回调统一走该适配层。
+import { scheduleOnReactNative } from "@jadezhou/sticky-tab-view/scheduleOnReactNative";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -474,7 +475,7 @@ function DemoTabBar({ activeHeaderOffset, current, onSelect, ys }: TabBarProps) 
   useAnimatedReaction(
     () => current.value,
     (next, prev) => {
-      if (next !== prev) runOnJS(setCurJS)(next);
+      if (next !== prev) scheduleOnReactNative(setCurJS, next);
     },
   );
 

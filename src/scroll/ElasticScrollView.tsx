@@ -9,10 +9,10 @@ import { LoadMoreFooter } from "../refresh/LoadMoreFooter.js";
 import {
   cancelAnimation,
   makeMutable,
-  runOnJS,
   SharedValue,
   withSpring,
 } from "react-native-reanimated";
+import { scheduleOnReactNative } from "../scheduleOnReactNative.js";
 import { ElasticPullRefreshHeader } from "../refresh/ElasticPullRefreshHeader.js";
 import { StickyTabContext } from "../core/contexts.js";
 import { TElasticScrollViewProps, TElasticScrollViewCoreProps, TDirection } from "../types.js";
@@ -159,14 +159,14 @@ const _ElasticScrollView = React.forwardRef<
       };
       const xPromise = new Promise<void>((resolve, reject) => {
         _x.value = withSpring(offset.x, springConfig, (isFinish) => {
-          if (isFinish) runOnJS(resolve)();
-          else runOnJS(reject)();
+          if (isFinish) scheduleOnReactNative(resolve);
+          else scheduleOnReactNative(reject);
         });
       });
       const yPromise = new Promise<void>((resolve, reject) => {
         _y.value = withSpring(offset.y, springConfig, (isFinish) => {
-          if (isFinish) runOnJS(resolve)();
-          else runOnJS(reject)();
+          if (isFinish) scheduleOnReactNative(resolve);
+          else scheduleOnReactNative(reject);
         });
       });
       return Promise.all([xPromise, yPromise]).then(() => undefined);

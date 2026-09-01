@@ -3,12 +3,12 @@ import { StyleSheet, View } from 'react-native';
 import {
   cancelAnimation,
   makeMutable,
-  runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { scheduleOnReactNative } from './scheduleOnReactNative.js';
 import { StickyTabContext } from './core/contexts.js';
 import { normalizePage } from './core/geometry.js';
 import { ElasticScrollView } from './scroll/ElasticScrollView.js';
@@ -147,7 +147,7 @@ export const StickyTabView = React.forwardRef<StickyTabViewHandle, TStickyTabVie
     useAnimatedReaction(
       () => currentPage.value,
       (page, previous) => {
-        if (page !== previous) runOnJS(notifyTabChange)(page);
+        if (page !== previous) scheduleOnReactNative(notifyTabChange, page);
       },
       [notifyTabChange],
     );
@@ -181,7 +181,7 @@ export const StickyTabView = React.forwardRef<StickyTabViewHandle, TStickyTabVie
         'worklet';
         const active = normalizePage(currentPage.value, handlers.length);
         const direction = event.translationX === 0 ? 0 : event.translationX > 0 ? -1 : 1;
-        if (lazy && Math.abs(event.translationX) > 2) runOnJS(markVisited)(normalizePage(active + direction, handlers.length));
+        if (lazy && Math.abs(event.translationX) > 2) scheduleOnReactNative(markVisited, normalizePage(active + direction, handlers.length));
         handlers[active]?.value.onActive?.(event, context);
       },
       onEnd: (event, context) => { 'worklet'; handlers[normalizePage(currentPage.value, handlers.length)]?.value.onEnd?.(event, context); },
