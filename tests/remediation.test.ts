@@ -16,10 +16,7 @@ import {
   normalizeMasonryColumn,
 } from '../src/masonry/model.js';
 import { withDecay } from '../src/core/decay.js';
-import type {
-  TElasticScrollViewCoreProps,
-  TElasticScrollViewProps,
-} from '../src/types.js';
+import type { TElasticScrollViewCoreProps, TElasticScrollViewProps } from '../src/types.js';
 import type { TFetchContext, TPanHandler } from '../src/index.js';
 import type { StyleProp, ViewStyle } from 'react-native';
 
@@ -41,17 +38,51 @@ describe('scroll geometry', () => {
   });
 
   test('chooses a reachable paging target from velocity and distance', () => {
-    expect(getPageTarget({ currentPage: 1, offset: 300, pageSize: 300, contentSize: 750, velocity: 0 })).toBe(1);
-    expect(getPageTarget({ currentPage: 1, offset: 490, pageSize: 300, contentSize: 750, velocity: 0 })).toBe(2);
-    expect(getPageTarget({ currentPage: 1, offset: 320, pageSize: 300, contentSize: 750, velocity: -4 })).toBe(2);
-    expect(getPageTarget({ currentPage: 0, offset: 0, pageSize: 300, contentSize: 750, velocity: 4 })).toBe(0);
-    expect(getPageTarget({ currentPage: 2, offset: 600, pageSize: 300, contentSize: 750, velocity: -4 })).toBe(2);
+    expect(
+      getPageTarget({ currentPage: 1, offset: 300, pageSize: 300, contentSize: 750, velocity: 0 }),
+    ).toBe(1);
+    expect(
+      getPageTarget({ currentPage: 1, offset: 490, pageSize: 300, contentSize: 750, velocity: 0 }),
+    ).toBe(2);
+    expect(
+      getPageTarget({ currentPage: 1, offset: 320, pageSize: 300, contentSize: 750, velocity: -4 }),
+    ).toBe(2);
+    expect(
+      getPageTarget({ currentPage: 0, offset: 0, pageSize: 300, contentSize: 750, velocity: 4 }),
+    ).toBe(0);
+    expect(
+      getPageTarget({ currentPage: 2, offset: 600, pageSize: 300, contentSize: 750, velocity: -4 }),
+    ).toBe(2);
   });
 
   test('uses configured end-reached distance and only triggers once per arm', () => {
-    expect(shouldTriggerEndReached({ offset: 650, contentSize: 1000, viewportSize: 300, distance: 100, armed: true })).toBe(true);
-    expect(shouldTriggerEndReached({ offset: 599, contentSize: 1000, viewportSize: 300, distance: 100, armed: true })).toBe(false);
-    expect(shouldTriggerEndReached({ offset: 650, contentSize: 1000, viewportSize: 300, distance: 100, armed: false })).toBe(false);
+    expect(
+      shouldTriggerEndReached({
+        offset: 650,
+        contentSize: 1000,
+        viewportSize: 300,
+        distance: 100,
+        armed: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldTriggerEndReached({
+        offset: 599,
+        contentSize: 1000,
+        viewportSize: 300,
+        distance: 100,
+        armed: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldTriggerEndReached({
+        offset: 650,
+        contentSize: 1000,
+        viewportSize: 300,
+        distance: 100,
+        armed: false,
+      }),
+    ).toBe(false);
   });
 });
 
@@ -66,8 +97,13 @@ describe('Masonry immutable data model', () => {
 
   test('appends sections and rejects ambiguous fetch responses', () => {
     const sections = [{ items: [{ id: 'b' }], column: 1 }];
-    expect(mergeFetchResult(first, { sections }, { replace: false })).toEqual([...first, ...sections]);
-    expect(() => mergeFetchResult(first, { items: [], sections }, { replace: false })).toThrow('either items or sections');
+    expect(mergeFetchResult(first, { sections }, { replace: false })).toEqual([
+      ...first,
+      ...sections,
+    ]);
+    expect(() => mergeFetchResult(first, { items: [], sections }, { replace: false })).toThrow(
+      'either items or sections',
+    );
   });
 
   test('compares dependency lists in both directions', () => {
@@ -129,10 +165,7 @@ describe('Masonry immutable data model', () => {
 
 describe('public and internal scroll prop contracts', () => {
   test('accepts composed content styles and non-zero internal page sizes', () => {
-    const contentContainerStyle: StyleProp<ViewStyle> = [
-      { paddingTop: 12 },
-      false,
-    ];
+    const contentContainerStyle: StyleProp<ViewStyle> = [{ paddingTop: 12 }, false];
     const publicProps: TElasticScrollViewProps = { contentContainerStyle };
     const coreProps: Pick<TElasticScrollViewCoreProps, 'pageSize'> = {
       pageSize: { width: 320, height: 640 },

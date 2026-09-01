@@ -27,7 +27,8 @@ import Reanimated, {
   withSpring,
 } from "react-native-reanimated";
 // 内部线程调度适配层（R3-003）：example 的 worklet→JS 回调统一走该适配层。
-import { scheduleOnReactNative } from "@jadezhou/sticky-tab-view/scheduleOnReactNative";
+// 包不导出 scheduleOnReactNative 子路径（P1-01 内聚），example 使用本地副本。
+import { scheduleOnReactNative } from "../utils/scheduleOnReactNative";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {

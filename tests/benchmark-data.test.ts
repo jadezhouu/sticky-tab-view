@@ -33,7 +33,9 @@ describe('Masonry benchmark data', () => {
     expect(first).toEqual(second);
     expect(first).toHaveLength(100);
     expect(first.every((item) => Number.isFinite(item.height) && item.height > 0)).toBe(true);
-    expect(new Set(first.map((item) => item.reuseType))).toEqual(new Set(['type-0', 'type-1', 'type-2']));
+    expect(new Set(first.map((item) => item.reuseType))).toEqual(
+      new Set(['type-0', 'type-1', 'type-2']),
+    );
   });
 
   test('normalizes unsupported benchmark dimensions to safe minimums', () => {

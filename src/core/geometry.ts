@@ -11,11 +11,7 @@ export function normalizePage(page: number | undefined, tabCount: number): numbe
   return clamp(page, 0, tabCount - 1);
 }
 
-export function getMaxOffset(
-  contentSize: number,
-  viewportSize: number,
-  trailingInset = 0,
-): number {
+export function getMaxOffset(contentSize: number, viewportSize: number, trailingInset = 0): number {
   'worklet';
   return Math.max(0, contentSize - viewportSize) + Math.max(0, trailingInset);
 }

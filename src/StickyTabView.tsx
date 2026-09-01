@@ -12,7 +12,13 @@ import { scheduleOnReactNative } from './scheduleOnReactNative.js';
 import { StickyTabContext } from './core/contexts.js';
 import { normalizePage } from './core/geometry.js';
 import { ElasticScrollView } from './scroll/ElasticScrollView.js';
-import type { TGestureContext, TPanEvent, TScrollHandlers, TStickyTabContext, TStickyTabViewProps } from './types.js';
+import type {
+  TGestureContext,
+  TPanEvent,
+  TScrollHandlers,
+  TStickyTabContext,
+  TStickyTabViewProps,
+} from './types.js';
 
 /**
  * Imperative handle for {@link StickyTabView}, exposed via `ref`.
@@ -40,7 +46,10 @@ export const StickyTabView = React.forwardRef<StickyTabViewHandle, TStickyTabVie
       ...viewProps
     } = props;
     const tabCount = Math.max(0, Math.trunc(requestedTabCount) || 0);
-    const tabIndices = useMemo(() => Array.from({ length: tabCount }, (_, index) => index), [tabCount]);
+    const tabIndices = useMemo(
+      () => Array.from({ length: tabCount }, (_, index) => index),
+      [tabCount],
+    );
     const initialPageRef = useRef(normalizePage(current, tabCount));
     const currentPage = useSharedValue(initialPageRef.current);
     const headerWidth = useSharedValue(0);
@@ -90,26 +99,35 @@ export const StickyTabView = React.forwardRef<StickyTabViewHandle, TStickyTabVie
       });
     }, [headerHeight, headerOffset, currentPage, tabBarHeight, ys]);
 
-    const changeTab = React.useCallback((requestedPage: number, animated: boolean) => {
-      const page = normalizePage(requestedPage, ys.length);
-      if (page === currentPage.value) return;
-      markVisited(page);
-      synchronizeHeader();
-      currentPage.value = page;
-      const target = page * pagerWidth.value;
-      x.value = animated && pagerWidth.value > 0
-        ? withSpring(target, { damping: 50, mass: 1, stiffness: 625 })
-        : target;
-    }, [currentPage, markVisited, pagerWidth, synchronizeHeader, x, ys.length]);
+    const changeTab = React.useCallback(
+      (requestedPage: number, animated: boolean) => {
+        const page = normalizePage(requestedPage, ys.length);
+        if (page === currentPage.value) return;
+        markVisited(page);
+        synchronizeHeader();
+        currentPage.value = page;
+        const target = page * pagerWidth.value;
+        x.value =
+          animated && pagerWidth.value > 0
+            ? withSpring(target, { damping: 50, mass: 1, stiffness: 625 })
+            : target;
+      },
+      [currentPage, markVisited, pagerWidth, synchronizeHeader, x, ys.length],
+    );
 
-    const handlePagerSizeChange = React.useCallback((size: { width: number }) => {
-      if (size.width <= 0) return;
-      pagerWidth.value = size.width;
-      cancelAnimation(x);
-      x.value = normalizePage(currentPage.value, tabCount) * size.width;
-    }, [currentPage, pagerWidth, tabCount, x]);
+    const handlePagerSizeChange = React.useCallback(
+      (size: { width: number }) => {
+        if (size.width <= 0) return;
+        pagerWidth.value = size.width;
+        cancelAnimation(x);
+        x.value = normalizePage(currentPage.value, tabCount) * size.width;
+      },
+      [currentPage, pagerWidth, tabCount, x],
+    );
 
-    React.useImperativeHandle(ref, () => ({ setTab: (page) => changeTab(page, true) }), [changeTab]);
+    React.useImperativeHandle(ref, () => ({ setTab: (page) => changeTab(page, true) }), [
+      changeTab,
+    ]);
 
     useEffect(() => {
       const page = normalizePage(currentPage.value, tabCount);
@@ -133,16 +151,22 @@ export const StickyTabView = React.forwardRef<StickyTabViewHandle, TStickyTabVie
       });
     }, [currentPage, pagerWidth, tabCount, x]);
 
-    useEffect(() => () => {
-      valuesRef.current.forEach(cancelAnimation);
-      handlersRef.current.forEach(cancelAnimation);
-      listenersRef.current.clear();
-    }, []);
+    useEffect(
+      () => () => {
+        valuesRef.current.forEach(cancelAnimation);
+        handlersRef.current.forEach(cancelAnimation);
+        listenersRef.current.clear();
+      },
+      [],
+    );
 
-    const notifyTabChange = React.useCallback((page: number) => {
-      markVisited(page);
-      listenersRef.current.forEach((listener) => listener(page));
-    }, [markVisited]);
+    const notifyTabChange = React.useCallback(
+      (page: number) => {
+        markVisited(page);
+        listenersRef.current.forEach((listener) => listener(page));
+      },
+      [markVisited],
+    );
 
     useAnimatedReaction(
       () => currentPage.value,
@@ -159,54 +183,116 @@ export const StickyTabView = React.forwardRef<StickyTabViewHandle, TStickyTabVie
       [synchronizeHeader],
     );
 
-    const actions = useMemo(() => tabIndices.map((index) => ({
-      tab: lazy ? index : undefined,
-      contentOffset: { y: ys[index] },
-      handlersMutable: handlers[index],
-      onTabChange(listener: (tab: number) => void) {
-        listenersRef.current.add(listener);
-        return () => listenersRef.current.delete(listener);
-      },
-    }) as TStickyTabContext), [handlers, lazy, tabIndices, ys]);
+    const actions = useMemo(
+      () =>
+        tabIndices.map(
+          (index) =>
+            ({
+              tab: lazy ? index : undefined,
+              contentOffset: { y: ys[index] },
+              handlersMutable: handlers[index],
+              onTabChange(listener: (tab: number) => void) {
+                listenersRef.current.add(listener);
+                return () => listenersRef.current.delete(listener);
+              },
+            }) as TStickyTabContext,
+        ),
+      [handlers, lazy, tabIndices, ys],
+    );
 
-    const panHandler = useMemo<TScrollHandlers>(() => ({
-      hasGestureFocus: () => handlers[normalizePage(currentPage.value, handlers.length)]?.value.hasGestureFocus?.() ?? false,
-      claimGestureFocus: () => { 'worklet'; },
-      onStart: (event: TPanEvent, context: TGestureContext) => {
-        'worklet';
-        context.isForwarded = true;
-        handlers[normalizePage(currentPage.value, handlers.length)]?.value.onStart?.(event, context);
-      },
-      onActive: (event: TPanEvent, context: TGestureContext) => {
-        'worklet';
-        const active = normalizePage(currentPage.value, handlers.length);
-        const direction = event.translationX === 0 ? 0 : event.translationX > 0 ? -1 : 1;
-        if (lazy && Math.abs(event.translationX) > 2) scheduleOnReactNative(markVisited, normalizePage(active + direction, handlers.length));
-        handlers[active]?.value.onActive?.(event, context);
-      },
-      onEnd: (event, context) => { 'worklet'; handlers[normalizePage(currentPage.value, handlers.length)]?.value.onEnd?.(event, context); },
-      onCancel: (event, context) => { 'worklet'; handlers[normalizePage(currentPage.value, handlers.length)]?.value.onCancel?.(event, context); },
-      onFail: (event, context) => { 'worklet'; handlers[normalizePage(currentPage.value, handlers.length)]?.value.onFail?.(event, context); },
-    }), [currentPage, handlers, lazy, markVisited]);
+    const panHandler = useMemo<TScrollHandlers>(
+      () => ({
+        hasGestureFocus: () =>
+          handlers[normalizePage(currentPage.value, handlers.length)]?.value.hasGestureFocus?.() ??
+          false,
+        claimGestureFocus: () => {
+          'worklet';
+        },
+        onStart: (event: TPanEvent, context: TGestureContext) => {
+          'worklet';
+          context.isForwarded = true;
+          handlers[normalizePage(currentPage.value, handlers.length)]?.value.onStart?.(
+            event,
+            context,
+          );
+        },
+        onActive: (event: TPanEvent, context: TGestureContext) => {
+          'worklet';
+          const active = normalizePage(currentPage.value, handlers.length);
+          const direction = event.translationX === 0 ? 0 : event.translationX > 0 ? -1 : 1;
+          if (lazy && Math.abs(event.translationX) > 2)
+            scheduleOnReactNative(markVisited, normalizePage(active + direction, handlers.length));
+          handlers[active]?.value.onActive?.(event, context);
+        },
+        onEnd: (event, context) => {
+          'worklet';
+          handlers[normalizePage(currentPage.value, handlers.length)]?.value.onEnd?.(
+            event,
+            context,
+          );
+        },
+        onCancel: (event, context) => {
+          'worklet';
+          handlers[normalizePage(currentPage.value, handlers.length)]?.value.onCancel?.(
+            event,
+            context,
+          );
+        },
+        onFail: (event, context) => {
+          'worklet';
+          handlers[normalizePage(currentPage.value, handlers.length)]?.value.onFail?.(
+            event,
+            context,
+          );
+        },
+      }),
+      [currentPage, handlers, lazy, markVisited],
+    );
 
     const headerTransform = useAnimatedStyle(() => {
       const page = normalizePage(currentPage.value, ys.length);
       const maxOffset = Math.max(0, headerHeight.value - tabBarHeight - headerOffset);
       return { transform: [{ translateY: -Math.min(ys[page]?.value ?? 0, maxOffset) }] };
     }, [headerOffset, tabBarHeight, ys]);
-    const tabContainerStyle = useMemo(() => ({ flex: 1, width: `${tabCount * 100}%` as `${number}%`, flexDirection: 'row' as const }), [tabCount]);
-    const shouldRender = (index: number) => !lazy || visited.has(index) || Math.abs(index - currentPage.value) <= lazyPreloadDistance;
+    const tabContainerStyle = useMemo(
+      () => ({
+        flex: 1,
+        width: `${tabCount * 100}%` as `${number}%`,
+        flexDirection: 'row' as const,
+      }),
+      [tabCount],
+    );
+    const shouldRender = (index: number) =>
+      !lazy || visited.has(index) || Math.abs(index - currentPage.value) <= lazyPreloadDistance;
 
     return (
       <View {...viewProps} style={[styles.container, style]}>
-        <ElasticScrollView bounces={false} contentContainerStyle={tabContainerStyle} contentOffset={{ x }} currentPage={currentPage} focus={focus} onSizeChange={handlePagerSizeChange} pagingEnabled="horizontal" scrollEnabled="horizontal" showsHorizontalScrollIndicator={false}>
+        <ElasticScrollView
+          bounces={false}
+          contentContainerStyle={tabContainerStyle}
+          contentOffset={{ x }}
+          currentPage={currentPage}
+          focus={focus}
+          onSizeChange={handlePagerSizeChange}
+          pagingEnabled="horizontal"
+          scrollEnabled="horizontal"
+          showsHorizontalScrollIndicator={false}
+        >
           {tabIndices.map((index) => (
             <View key={index} style={styles.tabPage}>
-              <StickyTabContext.Provider value={actions[index]}>{shouldRender(index) ? renderTab(index) : null}</StickyTabContext.Provider>
+              <StickyTabContext.Provider value={actions[index]}>
+                {shouldRender(index) ? renderTab(index) : null}
+              </StickyTabContext.Provider>
             </View>
           ))}
         </ElasticScrollView>
-        <ElasticScrollView panHandler={panHandler} showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false} size={{ width: headerWidth, height: headerHeight }} style={[styles.header, headerTransform]}>
+        <ElasticScrollView
+          panHandler={panHandler}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          size={{ width: headerWidth, height: headerHeight }}
+          style={[styles.header, headerTransform]}
+        >
           {renderHeader()}
           {renderTabBar?.(x, ys, currentPage)}
         </ElasticScrollView>

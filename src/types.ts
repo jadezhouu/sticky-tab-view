@@ -1,9 +1,9 @@
-import { LoadMoreFooter } from "./refresh/LoadMoreFooter.js";
-import { SharedValue } from "react-native-reanimated";
-import { PullRefreshHeader, PullRefreshHeaderHandle } from "./refresh/PullRefreshHeader.js";
-import { StyleProp, ViewProps, ViewStyle } from "react-native";
-import React from "react";
-import type { PanGestureHandlerEventPayload } from "react-native-gesture-handler";
+import { LoadMoreFooter } from './refresh/LoadMoreFooter.js';
+import { SharedValue } from 'react-native-reanimated';
+import { PullRefreshHeader, PullRefreshHeaderHandle } from './refresh/PullRefreshHeader.js';
+import { StyleProp, ViewProps, ViewStyle } from 'react-native';
+import React from 'react';
+import type { PanGestureHandlerEventPayload } from 'react-native-gesture-handler';
 
 export interface TElasticScrollViewProps extends ViewProps {
   contentContainerStyle?: StyleProp<ViewStyle>;
@@ -60,7 +60,7 @@ export interface TOnRefreshParam {
 
 /** @internal — 内部使用的完整 props，消费者只需关注 TElasticScrollViewProps */
 export interface TElasticScrollViewCoreProps extends TElasticScrollViewProps {
-  focus: SharedValue<boolean | "vertical" | "horizontal">;
+  focus: SharedValue<boolean | 'vertical' | 'horizontal'>;
   contentOffset: {
     x: SharedValue<number>;
     y: SharedValue<number>;
@@ -126,7 +126,7 @@ export interface TStickyTabViewProps extends ViewProps {
   ) => React.ReactNode;
 }
 
-export type TDirection = boolean | "vertical" | "horizontal";
+export type TDirection = boolean | 'vertical' | 'horizontal';
 
 export interface TIndicatorProps {
   horizontal?: boolean;
@@ -150,22 +150,17 @@ export interface TIndicatorProps {
 // 在 Payload 层面共享这些字段，用 Pick 统一签名，避免各处重复 any
 export type TPanEvent = Pick<
   PanGestureHandlerEventPayload,
-  | "translationX"
-  | "translationY"
-  | "absoluteX"
-  | "absoluteY"
-  | "velocityX"
-  | "velocityY"
+  'translationX' | 'translationY' | 'absoluteX' | 'absoluteY' | 'velocityX' | 'velocityY'
 >;
 
 // 手势生命周期共享的上下文对象
 // 所有字段均为可选：ctx 初始为空对象 {}，各字段在不同生命周期阶段逐步填入
 export type TGestureContext = {
-  started?:     boolean;                   // onStart 初始化，onActive 第一帧后置 true
-  priority?:    number;                    // claimGestureFocus 中竞争优先级
-  direction?:   TDirection;               // claimGestureFocus 仲裁确定的滚动方向
-  last?:        { x: number; y: number }; // onStart/onActive 记录上一帧绝对坐标
-  isForwarded?: boolean;                  // 手势由外层代理转发，收到后不再向父层冒泡
+  started?: boolean; // onStart 初始化，onActive 第一帧后置 true
+  priority?: number; // claimGestureFocus 中竞争优先级
+  direction?: TDirection; // claimGestureFocus 仲裁确定的滚动方向
+  last?: { x: number; y: number }; // onStart/onActive 记录上一帧绝对坐标
+  isForwarded?: boolean; // 手势由外层代理转发，收到后不再向父层冒泡
   keyboardDismissed?: boolean;
 };
 
@@ -208,7 +203,7 @@ export interface TFetchRes<T> {
   items?: readonly T[];
 }
 
-export type TMasonryRequestPhase = "initial" | "refresh" | "loadMore";
+export type TMasonryRequestPhase = 'initial' | 'refresh' | 'loadMore';
 
 export interface TMasonryErrorInfo {
   error: unknown;
@@ -223,26 +218,13 @@ export type TFetchContext = Record<string, unknown>;
 export type TFetchCtx = TFetchContext;
 
 export interface TMasonryListProps<T> extends TElasticScrollViewProps {
-  onFetch: (
-    page: number,
-    ctx: TFetchContext,
-    signal?: AbortSignal,
-  ) => Promise<TFetchRes<T>>;
-  heightForSectionHeader?: (
-    sectionData: TSectionData<T>,
-    sectionIndex: number,
-  ) => number;
-  renderSectionHeader?: (
-    sectionData: TSectionData<T>,
-    sectionIndex: number,
-  ) => React.ReactNode;
+  onFetch: (page: number, ctx: TFetchContext, signal?: AbortSignal) => Promise<TFetchRes<T>>;
+  heightForSectionHeader?: (sectionData: TSectionData<T>, sectionIndex: number) => number;
+  renderSectionHeader?: (sectionData: TSectionData<T>, sectionIndex: number) => React.ReactNode;
   heightForItem: (item: T, index: number, sectionIndex: number) => number;
   renderItem: (item: T, index: number, sectionIndex: number) => React.ReactNode;
   renderLoading?: () => React.ReactNode;
-  columnForSection?: (
-    sectionData: TSectionData<T>,
-    sectionIndex: number,
-  ) => number;
+  columnForSection?: (sectionData: TSectionData<T>, sectionIndex: number) => number;
   renderLoadingMore?: () => React.ReactNode;
   renderError?: (info: TMasonryErrorInfo) => React.ReactNode;
   onDataUpdate?: (data: readonly TSectionData<T>[]) => void;

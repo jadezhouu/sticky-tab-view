@@ -90,7 +90,8 @@ describe('MasonryList', () => {
     const first = createDeferred<{ items: Item[]; hasMore: boolean }>();
     const second = createDeferred<{ items: Item[]; hasMore: boolean }>();
     const onDataUpdate = jest.fn();
-    const onFetch = jest.fn()
+    const onFetch = jest
+      .fn()
       .mockReturnValueOnce(first.promise)
       .mockReturnValueOnce(second.promise);
     const renderList = (deps: readonly unknown[]) => (
@@ -126,7 +127,8 @@ describe('MasonryList', () => {
   });
 
   test('exposes an initial error phase and retries the failed first page', async () => {
-    const onFetch = jest.fn()
+    const onFetch = jest
+      .fn()
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce({ items: [{ id: 'recovered' }], hasMore: false });
     let retry: (() => void) | undefined;
@@ -161,7 +163,8 @@ describe('MasonryList', () => {
   });
 
   test('keeps loaded items when load-more fails and retries the same page', async () => {
-    const onFetch = jest.fn()
+    const onFetch = jest
+      .fn()
       .mockResolvedValueOnce({ items: [{ id: 'first' }], hasMore: true })
       .mockRejectedValueOnce(new Error('temporary failure'))
       .mockResolvedValueOnce({ items: [{ id: 'second' }], hasMore: false });
@@ -186,8 +189,7 @@ describe('MasonryList', () => {
       await Promise.resolve();
     });
     const endReachedReaction = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[1] as
-      | ((result: boolean, previous: boolean) => void)
-      | undefined;
+      ((result: boolean, previous: boolean) => void) | undefined;
 
     await act(async () => {
       endReachedReaction?.(true, false);
@@ -209,7 +211,8 @@ describe('MasonryList', () => {
   });
 
   test('exposes refresh failures and retries the first page', async () => {
-    const onFetch = jest.fn()
+    const onFetch = jest
+      .fn()
       .mockResolvedValueOnce({ items: [{ id: 'before-refresh' }], hasMore: false })
       .mockRejectedValueOnce(new Error('refresh failed'))
       .mockResolvedValueOnce({ items: [{ id: 'after-refresh' }], hasMore: false });
@@ -264,7 +267,8 @@ describe('MasonryList', () => {
   test('publishes refresh data instead of an older load-more response', async () => {
     const loadMore = createDeferred<{ items: Item[]; hasMore: boolean }>();
     const refresh = createDeferred<{ items: Item[]; hasMore: boolean }>();
-    const onFetch = jest.fn()
+    const onFetch = jest
+      .fn()
       .mockResolvedValueOnce({ items: [{ id: 'first' }], hasMore: true })
       .mockReturnValueOnce(loadMore.promise)
       .mockReturnValueOnce(refresh.promise);
@@ -285,8 +289,7 @@ describe('MasonryList', () => {
       await Promise.resolve();
     });
     const endReachedReaction = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[1] as
-      | ((result: boolean, previous: boolean) => void)
-      | undefined;
+      ((result: boolean, previous: boolean) => void) | undefined;
     await act(async () => {
       endReachedReaction?.(true, false);
       await Promise.resolve();
@@ -321,7 +324,8 @@ describe('MasonryList', () => {
   });
 
   test('appends a later page of sections with its own header', async () => {
-    const onFetch = jest.fn()
+    const onFetch = jest
+      .fn()
       .mockResolvedValueOnce({
         sections: [{ items: [{ id: 'first-section-item' }] }],
         hasMore: true,
@@ -347,8 +351,7 @@ describe('MasonryList', () => {
       await Promise.resolve();
     });
     const endReachedReaction = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[1] as
-      | ((result: boolean, previous: boolean) => void)
-      | undefined;
+      ((result: boolean, previous: boolean) => void) | undefined;
     await act(async () => {
       endReachedReaction?.(true, false);
       await Promise.resolve();
@@ -378,13 +381,12 @@ describe('MasonryList', () => {
       <MasonryList<Item>
         heightForItem={() => 80}
         heightForSectionHeader={() => 24}
-        onFetch={() => Promise.resolve({
-          sections: [
-            { items: [] },
-            { column: 2, items: [{ id: 'left' }, { id: 'right' }] },
-          ],
-          hasMore: false,
-        })}
+        onFetch={() =>
+          Promise.resolve({
+            sections: [{ items: [] }, { column: 2, items: [{ id: 'left' }, { id: 'right' }] }],
+            hasMore: false,
+          })
+        }
         renderItem={(item) => <Text>{item.id}</Text>}
         renderSectionHeader={(_section, index) => <Text>Section {index}</Text>}
         testID="masonry-root"
@@ -421,20 +423,18 @@ describe('MasonryList', () => {
     );
 
     const shouldTriggerEndReached = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[0] as
-      | (() => boolean)
-      | undefined;
+      (() => boolean) | undefined;
     expect(shouldTriggerEndReached?.()).toBe(false);
   });
 
   test('rebuilds every section when filters change', async () => {
     const filtered = { id: 'hide' };
-    const onFetch = jest.fn(() => Promise.resolve({
-      sections: [
-        { items: [filtered, { id: 'keep-first' }] },
-        { items: [{ id: 'keep-second' }] },
-      ],
-      hasMore: false,
-    }));
+    const onFetch = jest.fn(() =>
+      Promise.resolve({
+        sections: [{ items: [filtered, { id: 'keep-first' }] }, { items: [{ id: 'keep-second' }] }],
+        hasMore: false,
+      }),
+    );
     const renderList = (filters?: readonly Item[]) => (
       <MasonryList<Item>
         filters={filters}
@@ -472,13 +472,12 @@ describe('MasonryList', () => {
 
   test('rebuilds the first section when prependItems changes', async () => {
     const prepended = { id: 'prepended' };
-    const onFetch = jest.fn(() => Promise.resolve({
-      sections: [
-        { items: [{ id: 'first' }] },
-        { items: [{ id: 'second' }] },
-      ],
-      hasMore: false,
-    }));
+    const onFetch = jest.fn(() =>
+      Promise.resolve({
+        sections: [{ items: [{ id: 'first' }] }, { items: [{ id: 'second' }] }],
+        hasMore: false,
+      }),
+    );
     const renderList = (prependItems?: readonly Item[]) => (
       <MasonryList<Item>
         heightForItem={() => 80}
@@ -506,10 +505,12 @@ describe('MasonryList', () => {
 
   test('restores filtered item responses without rendering an implicit section header', async () => {
     const hidden = { id: 'hidden' };
-    const onFetch = jest.fn(() => Promise.resolve({
-      items: [hidden, { id: 'visible' }],
-      hasMore: false,
-    }));
+    const onFetch = jest.fn(() =>
+      Promise.resolve({
+        items: [hidden, { id: 'visible' }],
+        hasMore: false,
+      }),
+    );
     const renderList = (filters?: readonly Item[]) => (
       <MasonryList<Item>
         filters={filters}
@@ -539,7 +540,8 @@ describe('MasonryList', () => {
   });
 
   test('replaces section headers when refresh returns new sections', async () => {
-    const onFetch = jest.fn()
+    const onFetch = jest
+      .fn()
       .mockResolvedValueOnce({
         sections: [{ items: [{ id: 'before-refresh' }] }],
         hasMore: false,
@@ -588,7 +590,8 @@ describe('MasonryList', () => {
 
   test('publishes an immutable data snapshot for each page', async () => {
     const onDataUpdate = jest.fn();
-    const onFetch = jest.fn()
+    const onFetch = jest
+      .fn()
       .mockResolvedValueOnce({ items: [{ id: 'first' }], hasMore: true })
       .mockResolvedValueOnce({ items: [{ id: 'second' }], hasMore: false });
     (useAnimatedReaction as jest.Mock).mockClear();
@@ -609,8 +612,7 @@ describe('MasonryList', () => {
     });
     const firstSnapshot = onDataUpdate.mock.calls[0]?.[0] as { items: Item[] }[];
     const endReachedReaction = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[1] as
-      | ((result: boolean, previous: boolean) => void)
-      | undefined;
+      ((result: boolean, previous: boolean) => void) | undefined;
     await act(async () => {
       endReachedReaction?.(true, false);
       await Promise.resolve();
@@ -663,12 +665,24 @@ describe('MasonryList', () => {
     });
     const footer = findAll(
       screen.root!,
-      (node) => node.type === 'View' && node.props.onLayout && Array.isArray(node.props.style) && node.props.style.some((style: unknown) => typeof style === 'object' && style !== null && 'bottom' in style),
+      (node) =>
+        node.type === 'View' &&
+        node.props.onLayout &&
+        Array.isArray(node.props.style) &&
+        node.props.style.some(
+          (style: unknown) => typeof style === 'object' && style !== null && 'bottom' in style,
+        ),
     )[0];
-    const getHeight = () => findAll(
-      screen.root!,
-      (node) => node.type === 'AnimatedView' && Array.isArray(node.props.style) && node.props.style.some((style: unknown) => typeof style === 'object' && style !== null && 'height' in style),
-    )[0]?.props.style.find((style: { height?: number }) => style.height !== undefined)?.height;
+    const getHeight = () =>
+      findAll(
+        screen.root!,
+        (node) =>
+          node.type === 'AnimatedView' &&
+          Array.isArray(node.props.style) &&
+          node.props.style.some(
+            (style: unknown) => typeof style === 'object' && style !== null && 'height' in style,
+          ),
+      )[0]?.props.style.find((style: { height?: number }) => style.height !== undefined)?.height;
 
     await act(async () => {
       footer.props.onLayout({ nativeEvent: { layout: { width: 320, height: 20 } } });
@@ -681,7 +695,8 @@ describe('MasonryList', () => {
   });
 
   test('keeps the fixed footer height after the last pagination page', async () => {
-    const onFetch = jest.fn()
+    const onFetch = jest
+      .fn()
       .mockResolvedValueOnce({ items: [{ id: 'first' }], hasMore: true })
       .mockResolvedValueOnce({ items: [{ id: 'last' }], hasMore: false });
     (useAnimatedReaction as jest.Mock).mockClear();
@@ -702,19 +717,30 @@ describe('MasonryList', () => {
     });
     const footer = findAll(
       screen.root!,
-      (node) => node.type === 'View' && node.props.onLayout && Array.isArray(node.props.style) && node.props.style.some((style: unknown) => typeof style === 'object' && style !== null && 'bottom' in style),
+      (node) =>
+        node.type === 'View' &&
+        node.props.onLayout &&
+        Array.isArray(node.props.style) &&
+        node.props.style.some(
+          (style: unknown) => typeof style === 'object' && style !== null && 'bottom' in style,
+        ),
     )[0];
-    const getHeight = () => findAll(
-      screen.root!,
-      (node) => node.type === 'AnimatedView' && Array.isArray(node.props.style) && node.props.style.some((style: unknown) => typeof style === 'object' && style !== null && 'height' in style),
-    )[0]?.props.style.find((style: { height?: number }) => style.height !== undefined)?.height;
+    const getHeight = () =>
+      findAll(
+        screen.root!,
+        (node) =>
+          node.type === 'AnimatedView' &&
+          Array.isArray(node.props.style) &&
+          node.props.style.some(
+            (style: unknown) => typeof style === 'object' && style !== null && 'height' in style,
+          ),
+      )[0]?.props.style.find((style: { height?: number }) => style.height !== undefined)?.height;
     await act(async () => {
       footer.props.onLayout({ nativeEvent: { layout: { width: 320, height: 20 } } });
     });
 
     const endReachedReaction = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[1] as
-      | ((result: boolean, previous: boolean) => void)
-      | undefined;
+      ((result: boolean, previous: boolean) => void) | undefined;
     await act(async () => {
       endReachedReaction?.(true, false);
       await Promise.resolve();
@@ -771,7 +797,9 @@ describe('MasonryList', () => {
   });
 
   test('falls back to the first fetch when initData has no items array', async () => {
-    const onFetch = jest.fn(() => Promise.resolve({ items: [{ id: 'recovered' }], hasMore: false }));
+    const onFetch = jest.fn(() =>
+      Promise.resolve({ items: [{ id: 'recovered' }], hasMore: false }),
+    );
     const invalidInitData = [{}] as unknown as readonly { items: Item[] }[];
     const screen = await render(
       <MasonryList<Item>
@@ -810,7 +838,12 @@ describe('MasonryList', () => {
     });
     const contentHeight = findAll(
       screen.root!,
-      (node) => node.type === 'AnimatedView' && Array.isArray(node.props.style) && node.props.style.some((style: unknown) => typeof style === 'object' && style !== null && 'height' in style),
+      (node) =>
+        node.type === 'AnimatedView' &&
+        Array.isArray(node.props.style) &&
+        node.props.style.some(
+          (style: unknown) => typeof style === 'object' && style !== null && 'height' in style,
+        ),
     )[0]?.props.style.find((style: { height?: number }) => style.height !== undefined)?.height;
 
     expect(screen.getByText('invalid-height')).toBeTruthy();

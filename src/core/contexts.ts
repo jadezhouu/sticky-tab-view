@@ -1,32 +1,32 @@
-import React from "react";
-import { makeMutable } from "react-native-reanimated";
-import type { TScrollHandlers, TStickyTabContext } from "../types.js";
+import React from 'react';
+import { makeMutable } from 'react-native-reanimated';
+import type { TScrollHandlers, TStickyTabContext } from '../types.js';
 
 export const ElasticScrollContext = React.createContext<TScrollHandlers>({
   hasGestureFocus: () => {
     return false;
   },
   claimGestureFocus: () => {
-    "worklet";
+    'worklet';
     return false;
   },
   onStart: () => {
-    "worklet";
+    'worklet';
     return false;
   },
   onActive: () => {
-    "worklet";
+    'worklet';
     return false;
   },
   onEnd: () => {
-    "worklet";
+    'worklet';
     return false;
   },
   onCancel: () => {
-    "worklet";
+    'worklet';
   },
   onFail: () => {
-    "worklet";
+    'worklet';
   },
 });
 

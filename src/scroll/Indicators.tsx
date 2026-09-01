@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo } from 'react';
 import Reanimated, {
   cancelAnimation,
   useAnimatedReaction,
@@ -6,9 +6,9 @@ import Reanimated, {
   useSharedValue,
   withDelay,
   withTiming,
-} from "react-native-reanimated";
-import { TIndicatorProps } from "../types.js";
-import { styles } from "../styles.js";
+} from 'react-native-reanimated';
+import { TIndicatorProps } from '../types.js';
+import { styles } from '../styles.js';
 
 export function Indicator(props: TIndicatorProps) {
   const {
@@ -31,13 +31,11 @@ export function Indicator(props: TIndicatorProps) {
   const trackSize = useAnimatedStyle(() => {
     if (horizontal) {
       if (!contentSize.width.value) return {};
-      const width =
-        (size.width.value * size.width.value) / contentSize.width.value - 6;
+      const width = (size.width.value * size.width.value) / contentSize.width.value - 6;
       return { width: Math.max(0, width) };
     }
     if (!contentSize.height.value) return {};
-    const height =
-      (size.height.value * size.height.value) / contentSize.height.value - 6;
+    const height = (size.height.value * size.height.value) / contentSize.height.value - 6;
     return { height: Math.max(0, height) };
   });
   const transform = useAnimatedStyle(() => {
@@ -51,10 +49,7 @@ export function Indicator(props: TIndicatorProps) {
     return { opacity: opacity.value, transform: [{ translateY }] };
   });
   const style = useMemo(
-    () =>
-      horizontal
-        ? { left: 3, bottom: 4, height: 3 }
-        : { top: 3, right: 3, width: 3 },
+    () => (horizontal ? { left: 3, bottom: 4, height: 3 } : { top: 3, right: 3, width: 3 }),
     [horizontal],
   );
   return <Reanimated.View style={[styles.indicator, style, trackSize, transform]} />;

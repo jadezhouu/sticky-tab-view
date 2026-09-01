@@ -33,13 +33,7 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./package.json": "./package.json",
-    "./scheduleOnReactNative": {
-      "types": "./dist/scheduleOnReactNative.d.ts",
-      "react-native": "./dist/scheduleOnReactNative.js",
-      "import": "./dist/scheduleOnReactNative.js",
-      "default": "./dist/scheduleOnReactNative.js"
-    }
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
@@ -62,9 +56,10 @@
     "typecheck:example": "pnpm --dir example exec tsc --noEmit",
     "typecheck:fixture": "pnpm --dir fixtures/rn-081 exec tsc --noEmit",
     "lint": "eslint src tests --max-warnings=0",
-    "format:check": "prettier --check src tests",
+    "format:check": "prettier --check src tests .github/workflows",
+    "format:write": "prettier --write src tests .github/workflows",
     "verify:reanimated3": "node scripts/verify-reanimated3-contract.mjs",
-    "release:check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm typecheck:example && pnpm typecheck:fixture && npm pack --dry-run && pnpm verify:reanimated3 && pnpm smoke:consumer",
+    "release:check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm typecheck:example && pnpm typecheck:fixture && npm pack --dry-run && pnpm verify:reanimated3 && pnpm smoke:consumer",
     "smoke:consumer": "bash scripts/consumer-smoke.sh"
   },
   "dependencies": {
@@ -79,6 +74,11 @@
   "packageManager": "pnpm@10.4.1",
   "engines": {
     "node": ">=20.19.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "metro-cache": "0.82.0"
+    }
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

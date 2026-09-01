@@ -41,15 +41,11 @@ export function areDependencyListsEqual(
 }
 
 export function normalizeMasonryColumn(column: unknown): number {
-  return typeof column === 'number' && Number.isInteger(column) && column > 0
-    ? column
-    : 1;
+  return typeof column === 'number' && Number.isInteger(column) && column > 0 ? column : 1;
 }
 
 export function normalizeMasonryLength(length: unknown): number {
-  return typeof length === 'number' && Number.isFinite(length) && length >= 0
-    ? length
-    : 0;
+  return typeof length === 'number' && Number.isFinite(length) && length >= 0 ? length : 0;
 }
 
 export function findShortestColumnIndex(heights: readonly number[]): number {
@@ -74,9 +70,7 @@ export function findNearestThumbIndex(
   let distance = Number.POSITIVE_INFINITY;
   for (let index = 0; index < thumbs.length; index += 1) {
     const thumb = thumbs[index];
-    const nextDistance = Math.abs(
-      thumb.y + thumb.height / 2 - offset - frameHeight / 2,
-    );
+    const nextDistance = Math.abs(thumb.y + thumb.height / 2 - offset - frameHeight / 2);
     if (nextDistance < distance) {
       distance = nextDistance;
       nearest = index;

@@ -1,13 +1,13 @@
-import React from "react";
+import React from 'react';
 import Reanimated, {
   useDerivedValue,
   useAnimatedStyle,
   useAnimatedReaction,
-} from "react-native-reanimated";
-import { scheduleOnReactNative } from "../scheduleOnReactNative.js";
-import { StyleSheet } from "react-native";
-import { TMasonryCellProps } from "../types.js";
-import { findNearestThumbIndex } from "./model.js";
+} from 'react-native-reanimated';
+import { scheduleOnReactNative } from '../scheduleOnReactNative.js';
+import { StyleSheet } from 'react-native';
+import { TMasonryCellProps } from '../types.js';
+import { findNearestThumbIndex } from './model.js';
 
 export function MasonryCell<T>(props: TMasonryCellProps<T>) {
   const {
@@ -25,7 +25,7 @@ export function MasonryCell<T>(props: TMasonryCellProps<T>) {
   useAnimatedReaction(
     () => index.value,
     (next, pre) => {
-      if (typeof next === "number" && next !== pre) {
+      if (typeof next === 'number' && next !== pre) {
         scheduleOnReactNative(setCurrent, next);
       }
     },
@@ -34,10 +34,7 @@ export function MasonryCell<T>(props: TMasonryCellProps<T>) {
   const style = useAnimatedStyle(() => {
     const activeThumb = thumbs[index.value];
     return {
-      transform: [
-        { translateY: activeThumb?.y ?? 0 },
-        { translateX: activeThumb?.x ?? 0 },
-      ],
+      transform: [{ translateY: activeThumb?.y ?? 0 }, { translateX: activeThumb?.x ?? 0 }],
     };
   }, [thumbs]);
   const activeThumb = thumbs[current];
@@ -55,6 +52,6 @@ const styles = StyleSheet.create({
   item: {
     top: 0,
     left: 0,
-    position: "absolute",
+    position: 'absolute',
   },
 });

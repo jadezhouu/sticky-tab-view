@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  metro-cache: 0.82.0
+
 importers:
 
   .:
@@ -148,6 +151,9 @@ importers:
 
   fixtures/rn-081:
     dependencies:
+      '@babel/runtime':
+        specifier: ^7.28.6
+        version: 7.28.6
       '@jadezhou/sticky-tab-view':
         specifier: workspace:*
         version: link:../..
@@ -1485,10 +1491,6 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-  agent-base@7.1.4:
-    resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
-    engines: {node: '>= 14'}
-
   ajv@6.15.0:
     resolution: {integrity: sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw==}
 
@@ -2512,10 +2514,6 @@ packages:
     resolution: {integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==}
     engines: {node: '>= 0.8'}
 
-  https-proxy-agent@7.0.6:
-    resolution: {integrity: sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==}
-    engines: {node: '>= 14'}
-
   human-signals@2.1.0:
     resolution: {integrity: sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==}
     engines: {node: '>=10.17.0'}
@@ -3062,13 +3060,9 @@ packages:
     resolution: {integrity: sha512-Ycl8PBajB7bhbAI7Rt0xEyiF8oJ0RWX8EKkolV1KfCUlC++V/GStMSGpPLwnnBZXZWkCC5edBPzv1Hz1Yi0Euw==}
     engines: {node: '>=20.19.4'}
 
-  metro-cache@0.82.5:
-    resolution: {integrity: sha512-AwHV9607xZpedu1NQcjUkua8v7HfOTKfftl6Vc9OGr/jbpiJX6Gpy8E/V9jo/U9UuVYX2PqSUcVNZmu+LTm71Q==}
+  metro-cache@0.82.0:
+    resolution: {integrity: sha512-L/XUQTNDXWNwtc7SWGDnaZegHbfF66zsICeKz9qIMcS6+ubKkrYJ8mlsMhTPBEHKmzbenGL/9GnKx5GAqc8i3g==}
     engines: {node: '>=18.18'}
-
-  metro-cache@0.83.5:
-    resolution: {integrity: sha512-oH+s4U+IfZyg8J42bne2Skc90rcuESIYf86dYittcdWQtPfcaFXWpByPyTuWk3rR1Zz3Eh5HOrcVImfEhhJLng==}
-    engines: {node: '>=20.19.4'}
 
   metro-config@0.82.5:
     resolution: {integrity: sha512-/r83VqE55l0WsBf8IhNmc/3z71y2zIPe5kRSuqA5tY/SL/ULzlHUJEMd1szztd0G45JozLwjvrhAzhDPJ/Qo/g==}
@@ -3077,6 +3071,10 @@ packages:
   metro-config@0.83.5:
     resolution: {integrity: sha512-JQ/PAASXH7yczgV6OCUSRhZYME+NU8NYjI2RcaG5ga4QfQ3T/XdiLzpSb3awWZYlDCcQb36l4Vl7i0Zw7/Tf9w==}
     engines: {node: '>=20.19.4'}
+
+  metro-core@0.82.0:
+    resolution: {integrity: sha512-0UeWfwTiXgQd8BnSuXqs7mtXZ6Meu0Zxtef5hWhdA9wh6wieLD2dh3FROGgDgKDlXskvgnYBcD7s7ScANw+/7w==}
+    engines: {node: '>=18.18'}
 
   metro-core@0.82.5:
     resolution: {integrity: sha512-OJL18VbSw2RgtBm1f2P3J5kb892LCVJqMvslXxuxjAPex8OH7Eb8RBfgEo7VZSjgb/LOf4jhC4UFk5l5tAOHHA==}
@@ -3101,6 +3099,10 @@ packages:
   metro-minify-terser@0.83.5:
     resolution: {integrity: sha512-Toe4Md1wS1PBqbvB0cFxBzKEVyyuYTUb0sgifAZh/mSvLH84qA1NAWik9sISWatzvfWf3rOGoUoO5E3f193a3Q==}
     engines: {node: '>=20.19.4'}
+
+  metro-resolver@0.82.0:
+    resolution: {integrity: sha512-t8GS5JwE++vRmHMfj/6TFLFbc2eObJd5G1eDZHRUZreCywGQp9NW3gWSTIxM1iOYU8XpkgKnKZMqdRMQG2gcjA==}
+    engines: {node: '>=18.18'}
 
   metro-resolver@0.82.5:
     resolution: {integrity: sha512-kFowLnWACt3bEsuVsaRNgwplT8U7kETnaFHaZePlARz4Fg8tZtmRDUmjaD68CGAwc0rwdwNCkWizLYpnyVcs2g==}
@@ -6484,8 +6486,6 @@ snapshots:
 
   acorn@8.16.0: {}
 
-  agent-base@7.1.4: {}
-
   ajv@6.15.0:
     dependencies:
       fast-deep-equal: 3.1.3
@@ -7619,13 +7619,6 @@ snapshots:
       statuses: 2.0.2
       toidentifier: 1.0.1
 
-  https-proxy-agent@7.0.6:
-    dependencies:
-      agent-base: 7.1.4
-      debug: 4.4.3
-    transitivePeerDependencies:
-      - supports-color
-
   human-signals@2.1.0: {}
 
   hyphenate-style-name@1.1.0: {}
@@ -8335,23 +8328,11 @@ snapshots:
     dependencies:
       flow-enums-runtime: 0.0.6
 
-  metro-cache@0.82.5:
+  metro-cache@0.82.0:
     dependencies:
       exponential-backoff: 3.1.3
       flow-enums-runtime: 0.0.6
-      https-proxy-agent: 7.0.6
-      metro-core: 0.82.5
-    transitivePeerDependencies:
-      - supports-color
-
-  metro-cache@0.83.5:
-    dependencies:
-      exponential-backoff: 3.1.3
-      flow-enums-runtime: 0.0.6
-      https-proxy-agent: 7.0.6
-      metro-core: 0.83.5
-    transitivePeerDependencies:
-      - supports-color
+      metro-core: 0.82.0
 
   metro-config@0.82.5:
     dependencies:
@@ -8360,7 +8341,7 @@ snapshots:
       flow-enums-runtime: 0.0.6
       jest-validate: 29.7.0
       metro: 0.82.5
-      metro-cache: 0.82.5
+      metro-cache: 0.82.0
       metro-core: 0.82.5
       metro-runtime: 0.82.5
     transitivePeerDependencies:
@@ -8374,7 +8355,7 @@ snapshots:
       flow-enums-runtime: 0.0.6
       jest-validate: 29.7.0
       metro: 0.83.5
-      metro-cache: 0.83.5
+      metro-cache: 0.82.0
       metro-core: 0.83.5
       metro-runtime: 0.83.5
       yaml: 2.8.2
@@ -8382,6 +8363,12 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+
+  metro-core@0.82.0:
+    dependencies:
+      flow-enums-runtime: 0.0.6
+      lodash.throttle: 4.1.1
+      metro-resolver: 0.82.0
 
   metro-core@0.82.5:
     dependencies:
@@ -8432,6 +8419,10 @@ snapshots:
     dependencies:
       flow-enums-runtime: 0.0.6
       terser: 5.46.0
+
+  metro-resolver@0.82.0:
+    dependencies:
+      flow-enums-runtime: 0.0.6
 
   metro-resolver@0.82.5:
     dependencies:
@@ -8533,7 +8524,7 @@ snapshots:
       flow-enums-runtime: 0.0.6
       metro: 0.82.5
       metro-babel-transformer: 0.82.5
-      metro-cache: 0.82.5
+      metro-cache: 0.82.0
       metro-cache-key: 0.82.5
       metro-minify-terser: 0.82.5
       metro-source-map: 0.82.5
@@ -8553,7 +8544,7 @@ snapshots:
       flow-enums-runtime: 0.0.6
       metro: 0.83.5
       metro-babel-transformer: 0.83.5
-      metro-cache: 0.83.5
+      metro-cache: 0.82.0
       metro-cache-key: 0.83.5
       metro-minify-terser: 0.83.5
       metro-source-map: 0.83.5
@@ -8588,7 +8579,7 @@ snapshots:
       jsc-safe-url: 0.2.4
       lodash.throttle: 4.1.1
       metro-babel-transformer: 0.82.5
-      metro-cache: 0.82.5
+      metro-cache: 0.82.0
       metro-cache-key: 0.82.5
       metro-config: 0.82.5
       metro-core: 0.82.5
@@ -8635,7 +8626,7 @@ snapshots:
       jsc-safe-url: 0.2.4
       lodash.throttle: 4.1.1
       metro-babel-transformer: 0.83.5
-      metro-cache: 0.83.5
+      metro-cache: 0.82.0
       metro-cache-key: 0.83.5
       metro-config: 0.83.5
       metro-core: 0.83.5

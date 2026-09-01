@@ -4,10 +4,7 @@ import { act, render } from '@testing-library/react-native';
 import { findAll } from '@testing-library/react-native/dist/helpers/find-all';
 import { cancelAnimation, type SharedValue } from 'react-native-reanimated';
 
-import {
-  StickyTabView,
-  type StickyTabViewHandle,
-} from '../../src/StickyTabView.js';
+import { StickyTabView, type StickyTabViewHandle } from '../../src/StickyTabView.js';
 
 describe('StickyTabView', () => {
   test('forwards root ViewProps to the container', async () => {
@@ -76,7 +73,11 @@ describe('StickyTabView', () => {
   test('creates selectable pages when tabCount grows', async () => {
     const ref = createRef<StickyTabViewHandle>();
     let currentPage: SharedValue<number> | undefined;
-    const renderTabBar = (_x: SharedValue<number>, _ys: SharedValue<number>[], current: SharedValue<number>) => {
+    const renderTabBar = (
+      _x: SharedValue<number>,
+      _ys: SharedValue<number>[],
+      current: SharedValue<number>,
+    ) => {
       currentPage = current;
       return null;
     };
@@ -202,8 +203,11 @@ describe('StickyTabView', () => {
     expect(currentPage?.value).toBe(1);
     expect(horizontalOffset?.value).toBe(0);
 
-    const tabPager = screen.root && findAll(screen.root, (node) => node.type === 'AnimatedView')
-      .find((node) => node.props.onLayout && node.props.style?.[0]?.overflow === 'hidden');
+    const tabPager =
+      screen.root &&
+      findAll(screen.root, (node) => node.type === 'AnimatedView').find(
+        (node) => node.props.onLayout && node.props.style?.[0]?.overflow === 'hidden',
+      );
     await act(async () => {
       tabPager?.props.onLayout({
         nativeEvent: { layout: { width: 320, height: 640 } },
@@ -228,8 +232,11 @@ describe('StickyTabView', () => {
         }}
       />,
     );
-    const tabPager = screen.root && findAll(screen.root, (node) => node.type === 'AnimatedView')
-      .find((node) => node.props.onLayout && node.props.style?.[0]?.overflow === 'hidden');
+    const tabPager =
+      screen.root &&
+      findAll(screen.root, (node) => node.type === 'AnimatedView').find(
+        (node) => node.props.onLayout && node.props.style?.[0]?.overflow === 'hidden',
+      );
 
     await act(async () => {
       tabPager?.props.onLayout({

@@ -18,7 +18,8 @@ const DIST = path.join(ROOT, 'dist');
 function getExportModuleTargets(content: string): string[] {
   const modules: string[] = [];
   // export * from "./X.js"  或  export { A } from "./X.js"  或  export type { A } from "./X.js"
-  const re = /^\s*export(?:\s+type)?\s*(?:\*|\{[^}]*\})\s*from\s*"\.\/([^"]+)"/gm;
+  // 引号接受单/双两种：项目 prettier 配置为 singleQuote（dist 编译产物随 src 用单引号）。
+  const re = /^\s*export(?:\s+type)?\s*(?:\*|\{[^}]*\})\s*from\s*['"]\.\/([^"']+)['"]/gm;
   let m: RegExpExecArray | null;
   while ((m = re.exec(content)) !== null) {
     modules.push(m[1]);
@@ -76,9 +77,7 @@ function listFiles(dir: string): string[] {
 // ── 1. package.json 合规性 ──────────────────────────────
 
 describe('package.json compliance', () => {
-  const pkg = JSON.parse(
-    fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8'),
-  );
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8'));
 
   test('name and version are set', () => {
     expect(pkg.name).toBe('@jadezhou/sticky-tab-view');
@@ -99,6 +98,19 @@ describe('package.json compliance', () => {
     expect(pkg.exports['.'].import).toBe('./dist/index.js');
     expect(pkg.exports['.'].default).toBe('./dist/index.js');
     expect(pkg.exports['./package.json']).toBe('./package.json');
+  });
+
+  test('exports map is frozen to "." and "./package.json" only (P1-01)', () => {
+    // 内部适配层 scheduleOnReactNative 已内聚：不得通过任何子路径 export 暴露，
+    // 也不得把未来内部实现泄漏到发布面。新增子路径必须显式修改此冻结清单。
+    expect(Object.keys(pkg.exports).sort()).toEqual(['.', './package.json']);
+  });
+
+  test('scheduleOnReactNative is internal-only: not in entry source or entry dist (P1-01)', () => {
+    const srcEntry = fs.readFileSync(path.join(ROOT, 'src', 'index.ts'), 'utf-8');
+    const distEntry = fs.readFileSync(path.join(DIST, 'index.d.ts'), 'utf-8');
+    expect(srcEntry).not.toContain('scheduleOnReactNative');
+    expect(distEntry).not.toContain('scheduleOnReactNative');
   });
 
   test('package is ESM-only (type: module)', () => {
@@ -153,7 +165,7 @@ describe('dist/ build output integrity', () => {
 
   test('every .ts/.tsx source has matching .js and .d.ts in dist', () => {
     const srcFiles = listFiles(path.join(ROOT, 'src')).filter(
-      f => (f.endsWith('.ts') || f.endsWith('.tsx')) && !f.endsWith('.d.ts'),
+      (f) => (f.endsWith('.ts') || f.endsWith('.tsx')) && !f.endsWith('.d.ts'),
     );
     const distFiles = new Set(listFiles(DIST));
 
@@ -169,26 +181,22 @@ describe('dist/ build output integrity', () => {
   test('no stale artifacts: every .js/.d.ts in dist maps back to a source file', () => {
     const srcFiles = new Set(
       listFiles(path.join(ROOT, 'src')).filter(
-        f => (f.endsWith('.ts') || f.endsWith('.tsx')) && !f.endsWith('.d.ts'),
+        (f) => (f.endsWith('.ts') || f.endsWith('.tsx')) && !f.endsWith('.d.ts'),
       ),
     );
-    const distFiles = listFiles(DIST).filter(
-      f => f.endsWith('.js') || f.endsWith('.d.ts'),
-    );
+    const distFiles = listFiles(DIST).filter((f) => f.endsWith('.js') || f.endsWith('.d.ts'));
 
     for (const distFile of distFiles) {
       const srcTsFile = distFile.replace(/\.js$/, '.ts').replace(/\.d\.ts$/, '.ts');
       const srcTsxFile = distFile.replace(/\.js$/, '.tsx').replace(/\.d\.ts$/, '.tsx');
-      expect(
-        srcFiles.has(srcTsFile) || srcFiles.has(srcTsxFile),
-      ).toBe(true);
+      expect(srcFiles.has(srcTsFile) || srcFiles.has(srcTsxFile)).toBe(true);
     }
   });
 
   test('no .ts or .tsx files in dist (only .js and .d.ts)', () => {
     const distFiles = listFiles(DIST);
     const tsFiles = distFiles.filter(
-      f => (f.endsWith('.ts') || f.endsWith('.tsx')) && !f.endsWith('.d.ts'),
+      (f) => (f.endsWith('.ts') || f.endsWith('.tsx')) && !f.endsWith('.d.ts'),
     );
     expect(tsFiles).toEqual([]);
   });
@@ -196,12 +204,12 @@ describe('dist/ build output integrity', () => {
   test('dist directory mirrors src directory structure', () => {
     const srcDirs = new Set(
       listFiles(path.join(ROOT, 'src'))
-        .map(f => path.dirname(f))
+        .map((f) => path.dirname(f))
         .filter(Boolean),
     );
     const distDirs = new Set(
       listFiles(DIST)
-        .map(f => path.dirname(f))
+        .map((f) => path.dirname(f))
         .filter(Boolean),
     );
     for (const d of srcDirs) {
@@ -230,7 +238,7 @@ describe('export alignment: src/index.ts ↔ dist/index.d.ts', () => {
 
 describe('type declaration coverage', () => {
   test('every .d.ts file is non-empty', () => {
-    const distFiles = listFiles(DIST).filter(f => f.endsWith('.d.ts'));
+    const distFiles = listFiles(DIST).filter((f) => f.endsWith('.d.ts'));
     for (const f of distFiles) {
       const content = fs.readFileSync(path.join(DIST, f), 'utf-8');
       expect(content.length).toBeGreaterThan(0);
@@ -288,9 +296,7 @@ describe('type declaration coverage', () => {
 
 describe('publish tarball snapshot', () => {
   test('no source directories in published files (verified via files field)', () => {
-    const pkg = JSON.parse(
-      fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8'),
-    );
+    const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8'));
     const published = new Set(pkg.files);
     // files field explicit — npm won't include anything else
     expect(published.has('src')).toBe(false);
@@ -335,8 +341,8 @@ const PUBLIC_TYPE_EXPORTS = [
 /** 拼接 dist/ 下所有 .d.ts 内容，用于检查导出声明是否存在。 */
 function readAllDeclarations(): string {
   return listFiles(DIST)
-    .filter(f => f.endsWith('.d.ts'))
-    .map(f => fs.readFileSync(path.join(DIST, f), 'utf-8'))
+    .filter((f) => f.endsWith('.d.ts'))
+    .map((f) => fs.readFileSync(path.join(DIST, f), 'utf-8'))
     .join('\n');
 }
 
@@ -365,11 +371,12 @@ describe('public API snapshot', () => {
 
   test('index.d.ts explicitly re-exports exactly the 12 types.ts types', () => {
     const entry = fs.readFileSync(path.join(DIST, 'index.d.ts'), 'utf-8');
-    const m = entry.match(/export type \{([^}]+)\} from "\.\/types\.js"/);
+    // 引号接受单/双两种：项目 prettier 配置为 singleQuote。
+    const m = entry.match(/export type \{([^}]+)\} from ['"]\.\/types\.js['"]/);
     expect(m).not.toBeNull();
 
     const exported = (m![1].match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? [])
-      .filter(n => !['export', 'type'].includes(n))
+      .filter((n) => !['export', 'type'].includes(n))
       .sort();
 
     const expected = [
@@ -416,9 +423,7 @@ describe('public API snapshot', () => {
  * react-native-worklets 字样不算失败。
  */
 describe('Reanimated 3 line contract (PR-1)', () => {
-  const v3pkg = JSON.parse(
-    fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8'),
-  );
+  const v3pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8'));
 
   test('version major is 1', () => {
     expect(v3pkg.version).toMatch(/^1\./);
@@ -434,7 +439,12 @@ describe('Reanimated 3 line contract (PR-1)', () => {
   });
 
   test('no react-native-worklets in any package dependency field', () => {
-    for (const field of ['dependencies', 'peerDependencies', 'optionalDependencies', 'devDependencies']) {
+    for (const field of [
+      'dependencies',
+      'peerDependencies',
+      'optionalDependencies',
+      'devDependencies',
+    ]) {
       const deps = v3pkg[field] || {};
       expect(Object.keys(deps)).not.toContain('react-native-worklets');
     }

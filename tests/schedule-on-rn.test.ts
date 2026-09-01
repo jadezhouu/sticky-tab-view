@@ -12,8 +12,8 @@
  *   - 错误日志回传
  *
  * 红态：`../src/scheduleOnReactNative` 尚不存在，导入即失败；
- * 实现（V3-4-03）后转绿。Reanimated mock 的 runOnJS 同步返回原 callback，
- * 因此断言为同步行为，与 runonjs-contract 测试一致。
+ * 实现（V3-4-03）后转绿。Reanimated mock 的 runOnJS 同步调用 callback 并返回 void
+ * （P1-02），因此断言为同步行为，与 runonjs-contract 测试一致。
  */
 
 import { scheduleOnReactNative } from '../src/scheduleOnReactNative';

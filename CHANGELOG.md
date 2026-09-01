@@ -26,9 +26,11 @@ the `reanimated3-next` dist-tag.
 
 ### Compatibility
 
-- **Paper and Fabric both supported**; verified anchors built in both architectures:
-  Expo SDK 53 (React 19.0.0 / RN 0.79.6 / RNGH 2.24.0 / Reanimated 3.17.5) and
-  RN Community CLI 0.81 (React 19.1.0 / RN 0.81.5 / RNGH 2.28.0 / Reanimated 3.19.5).
+- **Paper and Fabric both build**, but only two representative Android combos are CI-verified:
+  Expo SDK 53 Paper (React 19.0.0 / RN 0.79.6 / RNGH 2.24.0 / Reanimated 3.17.5) and
+  RN Community CLI 0.81 Fabric (React 19.1.0 / RN 0.81.5 / RNGH 2.28.0 / Reanimated 3.19.5).
+  The full 8-combo matrix (× iOS/Android × Paper/Fabric) and device smoke are pending —
+  **not yet a release contract**.
 - Peer ranges: React `>=19.0.0 <20.0.0`, RN `>=0.79.0 <0.82.0`,
   `react-native-gesture-handler` `>=2.24.0 <2.29.0`,
   `react-native-reanimated` `>=3.17.4 <3.20.0`. Conditional pairing: RN 0.81 requires

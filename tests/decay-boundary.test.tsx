@@ -27,7 +27,10 @@ interface DecayAnimation {
   callback?: (finished?: boolean) => void;
 }
 
-function startDecay(config: ExtendedDecayConfig, callback?: (finished?: boolean) => void): DecayAnimation {
+function startDecay(
+  config: ExtendedDecayConfig,
+  callback?: (finished?: boolean) => void,
+): DecayAnimation {
   return withDecay(config, callback) as unknown as DecayAnimation;
 }
 

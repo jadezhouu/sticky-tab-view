@@ -2,7 +2,16 @@
 
 > English: [README.md](./README.md)
 
+> **⚠️ 旧版维护线（1.x）**：本线面向 `react-native-reanimated@3`（无 Worklets）。为既有
+> Reanimated 3 应用维护。**新项目应使用当前主线 `2.x`（Reanimated 4）** —— 见
+> [Reanimated 4 版 README](https://github.com/jadezhouu/sticky-tab-view#readme)。
+>
+> 请按 dist-tag 显式安装本线（预发布用 `reanimated3-next`，稳定用 `reanimated3`），并在
+> `package.json` 里固定 `^1.0.0` 或精确的 `1.x` 版本。
+
 用于可响应手势的折叠头部、横向分页 Tab、同步滚动与瀑布流布局的 React Native 组件。基于 `react-native-reanimated` 与 `react-native-gesture-handler` 构建。
+
+变更日志：[CHANGELOG.md](./CHANGELOG.md) · [GitHub Releases](https://github.com/jadezhouu/sticky-tab-view/releases)
 
 <p align="center">
   <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0/sticky-tab-view-demo.mp4">
@@ -29,56 +38,78 @@
 
 ## 环境要求
 
-- **必须使用新架构（Fabric）。** 本库仅面向 React Native 新架构构建；不支持 Paper / 旧架构。
+- **新架构（Fabric）与 Paper 都能构建**，但本仓库目前只在 CI 中验证了两个有代表性的
+  Android 组合（Expo SDK 53 Paper、RN 0.81 Fabric）。全八组合矩阵（× iOS/Android ×
+  Paper/Fabric）与设备冒烟尚未完成 —— **还不是发布契约**。
+- **无 Worklets**：本线使用 `react-native-reanimated@3`，其 worklet 运行时已内置于
+  Reanimated 3，独立的 `react-native-worklets` 包**不得**安装。
 - 开发与工具链需 **Node.js `>=20.19.4`**。
 - 本包为 **ESM-only**；不提供 CommonJS 构建。
 - 应用必须挂载在 [`GestureHandlerRootView`](#gesture-handler-root-view) 下。
-- 必须启用 Worklets Babel 插件。Expo SDK 54 通过 `babel-preset-expo` 配置；React Native Community CLI 项目需显式配置（见 [Babel 配置](#babel-setup)）。
+- 必须启用 Reanimated Babel 插件。Expo SDK 53 通过 `babel-preset-expo` 配置；React
+  Native Community CLI 项目需显式配置（见 [Babel 配置](#babel-setup)）。
 
 ## 安装
 
 ```bash
-npm install @jadezhou/sticky-tab-view
-# 或
-pnpm add @jadezhou/sticky-tab-view
-# 或
-yarn add @jadezhou/sticky-tab-view
+# Reanimated 3 线（1.x）—— 预发布 / 稳定
+npm install @jadezhou/sticky-tab-view@reanimated3-next   # 预发布
+# npm install @jadezhou/sticky-tab-view@reanimated3      # 稳定（发布后可用）
+pnpm add @jadezhou/sticky-tab-view@reanimated3-next
+yarn add @jadezhou/sticky-tab-view@reanimated3-next
 ```
+
+> **注意**：`npm install @jadezhou/sticky-tab-view`（不带 dist-tag）会安装 **2.x**
+> Reanimated 4 线 —— 不要用该命令安装 Reanimated 3 线。
 
 ### Peer 依赖
 
-你的应用必须已使用下方所列的兼容 React 与 React Native 版本。请勿用本库的安装命令去升级既有应用的 `react` 或 `react-native` 版本。
+你的应用必须已使用下方所列的兼容 React 与 React Native 版本。请勿用本库的安装命令去升级
+既有应用的 `react` 或 `react-native` 版本。
 
-对于 Expo SDK 54 项目，请用 Expo 安装兼容的原生 peer：
+对于 Expo SDK 53 项目，请用 Expo 安装兼容的原生 peer：
 
 ```bash
-npx expo install react-native-gesture-handler react-native-reanimated react-native-worklets
+npx expo install react-native-gesture-handler react-native-reanimated
 ```
 
-对于 React Native Community CLI，请安装所列 peer 范围内的版本，然后重新构建原生应用。你的包管理器可能会自动安装缺失的 peer 依赖；运行前请确认解析出的版本。
+对于 React Native Community CLI，请安装所列 peer 范围内的版本，然后重新构建原生应用。你的
+包管理器可能会自动安装缺失的 peer 依赖；运行前请确认解析出的版本。
 
 | 依赖                           | 要求范围           |
 | ------------------------------ | ------------------ |
-| `react`                        | `>=19.1.0 <20.0.0` |
-| `react-native`                 | `>=0.81.0 <0.82.0` |
-| `react-native-gesture-handler` | `>=2.28.0 <2.29.0` |
-| `react-native-reanimated`      | `>=4.1.0 <4.2.0`   |
-| `react-native-worklets`        | `>=0.5.0 <0.6.0`   |
+| `react`                        | `>=19.0.0 <20.0.0` |
+| `react-native`                 | `>=0.79.0 <0.82.0` |
+| `react-native-gesture-handler` | `>=2.24.0 <2.29.0` |
+| `react-native-reanimated`      | `>=3.17.4 <3.20.0` |
 
 ### 兼容矩阵
 
-本版本支持并针对以下组合进行了验证：
+Peer 边界（条件配对 —— 见下方"已知无效"）：
 
-| 依赖                         | 版本               |
-| ---------------------------- | ------------------ |
-| React                        | 19.1.0             |
-| React Native                 | 0.81.x             |
-| react-native-gesture-handler | 2.28.x             |
-| react-native-reanimated      | 4.1.x              |
-| react-native-worklets        | 0.5.x              |
-| 架构                         | 仅新架构（Fabric） |
+| 依赖                           | 要求范围           |
+| ------------------------------ | ------------------ |
+| `react`                        | `>=19.0.0 <20.0.0` |
+| `react-native`                 | `>=0.79.0 <0.82.0` |
+| `react-native-gesture-handler` | `>=2.24.0 <2.29.0` |
+| `react-native-reanimated`      | `>=3.17.4 <3.20.0` |
 
-Web/H5 **不属于**发布契约的一部分；它仅作为实验性构建冒烟测试使用（见 [平台支持](#platform-support)）。
+**已验证锚点** —— CI 中验证了两个有代表性的 Android 构建（全八组合矩阵与设备冒烟
+尚未完成，**还不是发布契约**）：
+
+| 锚点              | React   | React Native | RNGH   | Reanimated | CI 已验证（Android） |
+| ----------------- | ------- | ------------ | ------ | ---------- | --------------------- |
+| Expo SDK 53       | 19.0.0  | 0.79.x       | 2.24.x | 3.17.x     | Paper                 |
+| RN Community CLI  | 19.1.0  | 0.81.x       | 2.28.x | 3.19.x     | Fabric                |
+
+**上游兼容但未验证**：peer 范围内 Reanimated 3 上游支持、但本仓库尚未构建/测试的其他
+组合（如 RN 0.80 + Reanimated 3.18）。预期可用，但不在 CI 或发布契约覆盖之内。
+
+**已知无效**：peer 范围无法表达 RN 与 Reanimated 之间的条件配对。特别是 **RN 0.81 不得
+与 Reanimated 3.17.x 组合**（Reanimated 3.17.x 至多支持 RN 0.79；RN 0.81 需要 Reanimated
+3.19.x）。构建前用 `npm ls` / `pnpm why` 确认解析出的版本。
+
+Web/H5 **不属于**发布契约；它仅作为实验性构建冒烟测试使用（见 [平台支持](#platform-support)）。
 
 ### Gesture Handler Root View
 
@@ -98,9 +129,11 @@ export default function App() {
 
 ## Babel 配置
 
-必须启用 Worklets Babel 插件，worklet 才能运行。插件缺失或配置过期可能导致诸如 `Failed to create a worklet` 的错误。
+必须启用 Reanimated Babel 插件，worklet 才能运行。插件缺失或配置过期可能导致诸如
+`Failed to create a worklet` 的错误。
 
-**Expo SDK 54** — `babel-preset-expo` 默认已包含 Worklets 插件。标准 Expo 配置无需额外插件项：
+**Expo SDK 53** — `babel-preset-expo` 会检测 `react-native-reanimated` 并自动注入
+`react-native-reanimated/plugin`。标准 Expo 配置无需额外插件项：
 
 ```js
 module.exports = {
@@ -108,16 +141,34 @@ module.exports = {
 };
 ```
 
-如果你的 Expo 项目有自定义 Babel 配置，请确认插件仍处于启用状态；仅当 preset 未提供时才手动添加。
+在 Expo 项目中**不要**手动添加 `react-native-reanimated/plugin` —— 那会造成插件重复。
+本库还建议用 Reanimated 3 的 `wrapWithReanimatedMetroConfig` 包装 Metro 配置，以获得可读的
+worklet 调用栈：
 
-**React Native Community CLI** — 保留现有 preset，并添加插件：
+```js
+const { getDefaultConfig } = require('expo/metro-config');
+const { wrapWithReanimatedMetroConfig } = require('react-native-reanimated/metro-config');
+const config = getDefaultConfig(__dirname);
+module.exports = wrapWithReanimatedMetroConfig(config);
+```
+
+**React Native Community CLI** — 保留现有 preset，并把插件**放在最后**：
 
 ```js
 module.exports = {
   presets: ['module:@react-native/babel-preset'],
-  plugins: ['react-native-worklets/plugin'],
+  plugins: ['react-native-reanimated/plugin'],
 };
 ```
+
+修改 Babel 配置后，需清缓存重启 Metro（Expo：`pnpm --dir example start --clear`）。
+
+> **Expo Go 不是发布门禁。** Expo Go 总是新架构，且内置自己的 JS/native patch，与本仓库
+> 冻结的锁文件版本不一致。请使用 **Development Build**（`npx expo run:ios|android`）做真实
+> 验证；仅在确切 patch 已确认匹配时，才把 Expo Go 作为辅助的 Fabric 冒烟。
+
+> **Dependabot / Renovate**：不要在本维护线上自动合并升级到 `2.x`（Reanimated 4）的 PR ——
+> 那需要迁移到 Reanimated 4 + Worklets。请把此类升级当作手动迁移任务处理。
 
 如果你的项目本就不用 Expo，请**不要**添加 `babel-preset-expo` —— 本库本身不依赖 Expo。
 
@@ -186,7 +237,8 @@ export default function MyScreen() {
 
 ### StickyTabView
 
-带共享可折叠头部的分页容器。从头部区域开始的纵向拖动也会驱动当前 Tab 的内容滚动与头部折叠，让 TabBar 上下区域保持连续的滚动体验。组件同时通过 `ref` 暴露命令式句柄。
+带共享可折叠头部的分页容器。从头部区域开始的纵向拖动也会驱动当前 Tab 的内容滚动与头部折叠，
+让 TabBar 上下区域保持连续的滚动体验。组件同时通过 `ref` 暴露命令式句柄。
 
 | Prop                  | 类型                                    | 默认值   | 说明                                           |
 | --------------------- | --------------------------------------- | -------- | ---------------------------------------------- |
@@ -200,7 +252,8 @@ export default function MyScreen() {
 | `tabBarHeight`        | `number`                                | `50`     | 渲染出的 Tab 栏实际高度（单位 point）          |
 | `headerOffset`        | `number`                                | `0`      | 从可折叠头部预留的高度（例如固定悬浮层）       |
 
-`tabBarHeight` 必须与自定义 Tab 栏的高度一致。挂载后切换 Tab，用 `ref.current?.setTab(index)`；之后修改 `current` 不会控制激活的 Tab。
+`tabBarHeight` 必须与自定义 Tab 栏的高度一致。挂载后切换 Tab，用 `ref.current?.setTab(index)`；
+之后修改 `current` 不会控制激活的 Tab。
 
 句柄方法：
 
@@ -211,7 +264,9 @@ ref.current?.setTab(1); // 编程方式切换 Tab
 
 ### ElasticScrollView
 
-手势驱动的滚动容器。与 React Native 的 `ScrollView` 类似，它渲染调用方提供的 children，且**不会**对任意子元素做虚拟化。适合有界内容以及吸顶头部、分页、刷新与加载更多交互。对于长而不受约束的列表，请优先使用 `MasonryList`。
+手势驱动的滚动容器。与 React Native 的 `ScrollView` 类似，它渲染调用方提供的 children，且
+**不会**对任意子元素做虚拟化。适合有界内容以及吸顶头部、分页、刷新与加载更多交互。对于长而
+不受约束的列表，请优先使用 `MasonryList`。
 
 | Prop                     | 类型                                    | 默认值                     | 说明                                   |
 | ------------------------ | --------------------------------------- | -------------------------- | -------------------------------------- |
@@ -237,15 +292,19 @@ const ref = useRef<ElasticScrollViewHandle>(null);
 await ref.current?.scrollTo({ x: 0, y: 0 }, true); // 滚动到偏移量，可选动画
 ```
 
-`scrollTo` 与 `scroll` 均返回 `Promise<void>`。该组件也接受标准的 React Native `ViewProps` 及高级属性，如 `contentInsets`、`contentOffset` 与滚动生命周期回调；完整定义见 `TElasticScrollViewProps`。
+`scrollTo` 与 `scroll` 均返回 `Promise<void>`。该组件也接受标准的 React Native `ViewProps` 及
+高级属性，如 `contentInsets`、`contentOffset` 与滚动生命周期回调；完整定义见 `TElasticScrollViewProps`。
 
 ### ElasticPullRefreshHeader
 
-默认下拉刷新指示器。你可以通过 `ElasticScrollView` 的 `pullRefreshHeader` prop 传入自定义 forward-ref 组件；它必须暴露相同的 ref 接口以及一个数值静态 `height`。编写自定义头部时，可从 `TElasticScrollViewProps['pullRefreshHeader']` 推导出接受的组件类型。
+默认下拉刷新指示器。你可以通过 `ElasticScrollView` 的 `pullRefreshHeader` prop 传入自定义
+forward-ref 组件；它必须暴露相同的 ref 接口以及一个数值静态 `height`。编写自定义头部时，可从
+`TElasticScrollViewProps['pullRefreshHeader']` 推导出接受的组件类型。
 
 ### MasonryList
 
-瀑布流列表，使用本库自带的布局缓存与单元复用层。它是本包中的长列表组件，不依赖 FlatList、FlashList 或 LegendList。
+瀑布流列表，使用本库自带的布局缓存与单元复用层。它是本包中的长列表组件，不依赖 FlatList、
+FlashList 或 LegendList。
 
 必填 props（泛型项类型为 `T`）：
 
@@ -255,15 +314,21 @@ await ref.current?.scrollTo({ x: 0, y: 0 }, true); // 滚动到偏移量，可�
 | `heightForItem` | `(item, index, sectionIndex) => number`         | 每项的高度   |
 | `renderItem`    | `(item, index, sectionIndex) => ReactNode`      | 渲染每一项   |
 
-`onFetch` 首次加载时收到 `0`，并带一个可选的 `AbortSignal`；当你的数据客户端支持取消时请遵循该 signal。返回 `items` 或 `sections`（不可同时返回），并用 `hasMore` 控制后续分页。`heightForItem` 必须返回所渲染项的实际高度。
+`onFetch` 首次加载时收到 `0`，并带一个可选的 `AbortSignal`；当你的数据客户端支持取消时请遵循
+该 signal。返回 `items` 或 `sections`（不可同时返回），并用 `hasMore` 控制后续分页。`heightForItem`
+必须返回所渲染项的实际高度。
 
-`renderError` 收到 `{ error, phase, retry }`。`phase` 为 `initial`、`refresh` 或 `loadMore`；调用 `retry()` 可重试失败请求。既有的零参数错误渲染器仍然受支持。当异构项布局需单独复用时，可设置项的可选 `reuseType`。
+`renderError` 收到 `{ error, phase, retry }`。`phase` 为 `initial`、`refresh` 或 `loadMore`；
+调用 `retry()` 可重试失败请求。既有的零参数错误渲染器仍然受支持。当异构项布局需单独复用时，
+可设置项的可选 `reuseType`。
 
 完整 prop 类型见 `TMasonryListProps`。
 
 ### 公共类型
 
-`ElasticScrollViewHandle`、`StickyTabViewHandle`、`TDirection`、`TElasticScrollViewProps`、`TFetchContext`、`TFetchRes`、`TItemBase`、`TMasonryErrorInfo`、`TMasonryListProps`、`TMasonryRequestPhase`、`TOnRefreshParam`、`TPanHandler`、`TSectionData`、`TStickyTabViewProps`。
+`ElasticScrollViewHandle`、`StickyTabViewHandle`、`TDirection`、`TElasticScrollViewProps`、
+`TFetchContext`、`TFetchRes`、`TItemBase`、`TMasonryErrorInfo`、`TMasonryListProps`、
+`TMasonryRequestPhase`、`TOnRefreshParam`、`TPanHandler`、`TSectionData`、`TStickyTabViewProps`。
 
 用 `import type` 引入：
 
@@ -292,7 +357,8 @@ import type {
 
 ### 分页（加载更多）
 
-`onEndReached` resolve 一个布尔值：`true` 表示还有更多内容，`false`（或 `undefined`）则停止后续请求。数据加载完后设置 `loadFinished`。
+`onEndReached` resolve 一个布尔值：`true` 表示还有更多内容，`false`（或 `undefined`）则停止
+后续请求。数据加载完后设置 `loadFinished`。
 
 ```tsx
 const [loadFinished, setLoadFinished] = useState(false);
@@ -346,13 +412,15 @@ const [loadFinished, setLoadFinished] = useState(false);
 | 分页           | ✅  | ✅      | 实验性（构建冒烟） |
 | 瀑布流布局     | ✅  | ✅      | 实验性（构建冒烟） |
 
-本库的支持目标是 iOS 与 Android。Expo example 保留了实验性的 `react-native-web` 构建冒烟，但浏览器交互、手势与性能兼容性不属于发布契约。
+本库的支持目标是 iOS 与 Android。Expo example 保留了实验性的 `react-native-web` 构建冒烟，
+但浏览器交互、手势与性能兼容性不属于发布契约。
 
 ## 故障排查
 
-### `Failed to create a worklet` 或 Worklets 版本不匹配
+### `Failed to create a worklet` 或 Reanimated 版本不匹配
 
-确认应用使用兼容矩阵中的 peer 版本、Worklets Babel 插件已启用，并清缓存重启 Metro。安装或升级 `react-native-reanimated` 或 `react-native-worklets` 后需重新构建原生应用。
+确认应用使用兼容矩阵中的 peer 版本、Reanimated Babel 插件已启用（见 [Babel 配置](#babel-setup)），
+并清缓存重启 Metro。安装或升级 `react-native-reanimated` 后需重新构建原生应用。
 
 ### 手势无响应
 
@@ -364,7 +432,9 @@ const [loadFinished, setLoadFinished] = useState(false);
 
 ## Reanimated 3 兼容线
 
-本仓库当前发布的是 **Reanimated 4** 线（`2.x`）。计划未来推出 **Reanimated 3** 兼容线（`1.x`），发布在 `reanimated3` / `reanimated3-next` dist-tag 下。它**尚未可用** —— 请勿假设本版本支持 Reanimated 3。
+本文档描述的是 **Reanimated 3 兼容线（`1.x`）**，发布在 `reanimated3` / `reanimated3-next`
+dist-tag 下。**Reanimated 4 主线（`2.x`）**（`latest` / `next`）是当前默认线。两条线永不
+交叉使用 dist-tag。
 
 ## 开发
 

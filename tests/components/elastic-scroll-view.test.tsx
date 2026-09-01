@@ -92,13 +92,9 @@ describe('ElasticScrollView', () => {
   test('uses the latest onScrollBeginDrag callback on the next gesture', async () => {
     const initialCallback = jest.fn();
     const updatedCallback = jest.fn();
-    const screen = await render(
-      <ElasticScrollView onScrollBeginDrag={initialCallback} />,
-    );
+    const screen = await render(<ElasticScrollView onScrollBeginDrag={initialCallback} />);
 
-    await screen.rerender(
-      <ElasticScrollView onScrollBeginDrag={updatedCallback} />,
-    );
+    await screen.rerender(<ElasticScrollView onScrollBeginDrag={updatedCallback} />);
     const gesture = __panGestures[__panGestures.length - 1];
     await act(async () => {
       gesture?.start?.({
@@ -116,13 +112,9 @@ describe('ElasticScrollView', () => {
   test('uses the latest onScrollEndDrag callback on the next gesture', async () => {
     const initialCallback = jest.fn();
     const updatedCallback = jest.fn();
-    const screen = await render(
-      <ElasticScrollView onScrollEndDrag={initialCallback} />,
-    );
+    const screen = await render(<ElasticScrollView onScrollEndDrag={initialCallback} />);
 
-    await screen.rerender(
-      <ElasticScrollView onScrollEndDrag={updatedCallback} />,
-    );
+    await screen.rerender(<ElasticScrollView onScrollEndDrag={updatedCallback} />);
     const gesture = __panGestures[__panGestures.length - 1];
     await act(async () => {
       gesture?.start?.({ absoluteX: 0, absoluteY: 0, translationX: 0, translationY: 0 });
@@ -270,8 +262,7 @@ describe('ElasticScrollView', () => {
     await render(<ElasticScrollView onEndReached={onEndReached} />);
 
     const endReachedReaction = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[1] as
-      | ((result: boolean, previous: boolean) => void)
-      | undefined;
+      ((result: boolean, previous: boolean) => void) | undefined;
 
     expect(() => endReachedReaction?.(true, false)).not.toThrow();
     expect(onEndReached).toHaveBeenCalledTimes(1);
@@ -287,8 +278,11 @@ describe('ElasticScrollView', () => {
         size={{ width: makeMutable(100), height: makeMutable(100) }}
       />,
     );
-    const selector = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[0] as (() => boolean);
-    const reaction = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[1] as (result: boolean, previous: boolean) => void;
+    const selector = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[0] as () => boolean;
+    const reaction = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[1] as (
+      result: boolean,
+      previous: boolean,
+    ) => void;
 
     expect(selector()).toBe(true);
     reaction(true, false);
@@ -297,9 +291,12 @@ describe('ElasticScrollView', () => {
 
   test('re-arms end reached after a rejected pagination request', async () => {
     let rejectRequest: ((reason?: unknown) => void) | undefined;
-    const onEndReached = jest.fn(() => new Promise<boolean>((_resolve, reject) => {
-      rejectRequest = reject;
-    }));
+    const onEndReached = jest.fn(
+      () =>
+        new Promise<boolean>((_resolve, reject) => {
+          rejectRequest = reject;
+        }),
+    );
     await render(
       <ElasticScrollView
         contentOffset={{ y: makeMutable(100) }}
@@ -310,8 +307,11 @@ describe('ElasticScrollView', () => {
         size={{ width: makeMutable(100), height: makeMutable(100) }}
       />,
     );
-    const selector = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[0] as (() => boolean);
-    const reaction = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[1] as (result: boolean, previous: boolean) => void;
+    const selector = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[0] as () => boolean;
+    const reaction = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[1] as (
+      result: boolean,
+      previous: boolean,
+    ) => void;
 
     reaction(true, false);
     expect(onEndReached).toHaveBeenCalledTimes(1);
@@ -336,8 +336,11 @@ describe('ElasticScrollView', () => {
         size={{ width: makeMutable(100), height: makeMutable(100) }}
       />,
     );
-    const selector = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[0] as (() => boolean);
-    const reaction = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[1] as (result: boolean, previous: boolean) => void;
+    const selector = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[0] as () => boolean;
+    const reaction = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[1] as (
+      result: boolean,
+      previous: boolean,
+    ) => void;
 
     reaction(true, false);
     await act(async () => {
@@ -438,14 +441,10 @@ describe('ElasticScrollView', () => {
 
   test('settles a controlled refresh when refreshing changes to false', async () => {
     const onRefresh = jest.fn();
-    const screen = await render(
-      <ElasticScrollView onRefresh={onRefresh} refreshing />,
-    );
+    const screen = await render(<ElasticScrollView onRefresh={onRefresh} refreshing />);
 
-    const getIndicator = () => findAll(
-      screen.root!,
-      (node) => node.type === 'ActivityIndicator',
-    )[0];
+    const getIndicator = () =>
+      findAll(screen.root!, (node) => node.type === 'ActivityIndicator')[0];
     expect(getIndicator().props.animating).toBe(true);
 
     await screen.rerender(<ElasticScrollView onRefresh={onRefresh} refreshing={false} />);
@@ -455,21 +454,14 @@ describe('ElasticScrollView', () => {
   });
 
   test('renders the controlled loading footer state', async () => {
-    const screen = await render(
-      <ElasticScrollView
-        loadingMore
-        onEndReached={async () => false}
-      />,
-    );
+    const screen = await render(<ElasticScrollView loadingMore onEndReached={async () => false} />);
 
     expect(screen.getByText('loading')).toBeTruthy();
 
     await screen.rerender(<ElasticScrollView onEndReached={async () => false} />);
     expect(screen.getByText('idle')).toBeTruthy();
 
-    await screen.rerender(
-      <ElasticScrollView loadFinished onEndReached={async () => false} />,
-    );
+    await screen.rerender(<ElasticScrollView loadFinished onEndReached={async () => false} />);
     expect(screen.getByText('finished')).toBeTruthy();
   });
 
@@ -488,8 +480,7 @@ describe('ElasticScrollView', () => {
     );
 
     const endReachedSelector = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[0] as
-      | (() => boolean)
-      | undefined;
+      (() => boolean) | undefined;
 
     expect(endReachedSelector?.()).toBe(false);
     expect(onEndReached).not.toHaveBeenCalled();
@@ -506,7 +497,7 @@ describe('ElasticScrollView', () => {
       size: { width: makeMutable(100), height: makeMutable(100) },
     };
     const screen = await render(<ElasticScrollView {...props} loadingMore />);
-    let selector = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[0] as (() => boolean);
+    let selector = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[0] as () => boolean;
     expect(selector()).toBe(false);
 
     await screen.rerender(<ElasticScrollView {...props} loadingMore={false} />);
@@ -532,8 +523,7 @@ describe('ElasticScrollView', () => {
     );
 
     const endReachedSelector = (useAnimatedReaction as jest.Mock).mock.calls[0]?.[0] as
-      | (() => boolean)
-      | undefined;
+      (() => boolean) | undefined;
 
     expect(endReachedSelector?.()).toBe(false);
     expect(onEndReached).not.toHaveBeenCalled();
@@ -560,10 +550,12 @@ describe('ElasticScrollView', () => {
       root.props.onAccessibilityAction({ nativeEvent: { actionName: 'decrement' } });
     });
     expect(y.value).toBe(0);
-    expect(root.props.accessibilityActions).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: 'increment' }),
-      expect.objectContaining({ name: 'decrement' }),
-    ]));
+    expect(root.props.accessibilityActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'increment' }),
+        expect.objectContaining({ name: 'decrement' }),
+      ]),
+    );
   });
 
   test('provides accessibility actions for horizontal paging without changing vertical offset', async () => {

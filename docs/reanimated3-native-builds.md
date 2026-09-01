@@ -143,6 +143,10 @@ rm -rf fixtures/rn-081/ios/Pods fixtures/rn-081/ios/Podfile.lock
 
 ## 4. CI 验证与证据（V3-6-03）
 
+> **编排变更（P0-01）**：nightly / release-candidate 的全八组合矩阵、candidate SHA 校验与
+> attestation 统一由 **main** 上的 `.github/workflows/v3-native-dispatcher.yml` 编排（schedule 与
+> workflow_dispatch 只在默认分支生效）。本文档的命令供该工作流与人工设备冒烟使用。
+
 CI 在每个锚点记录 `require.resolve`、`pnpm why --filter` 与 native autolinking 输出
 （`npx react-native config`），证明各自解析到自己的 React/RN/Reanimated/RNGH，无错误
 hoist。人工设备完成后，release-candidate 通过受保护输入 `device_evidence_url` 生成
