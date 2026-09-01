@@ -21,4 +21,11 @@ defaultConfig.watchFolders = [path.resolve(__dirname, '..', '..')];
 // @babel/runtime 的实际文件布局一致，也避免 warning 噪声掩盖真实解析错误。
 defaultConfig.resolver.unstable_enablePackageExports = false;
 
+// 库的 dist 经 workspace 符号链接被 Metro 解析到仓库根的真实路径
+// （/…/dist/*.js），因此 @babel/runtime/helpers/* 按祖先目录链在仓库根的
+// node_modules 下解析——而 pnpm 默认不把 @babel/runtime 提升到仓库根。
+// 所以仓库根 package.json 的 devDependencies 里声明了 "@babel/runtime"
+// （确定性地产生 root node_modules/@babel/runtime），否则干净安装后本 fixture
+// 的 bundle 门禁必然失败（P0-06：fixture 可运行性）。
+
 module.exports = wrapWithReanimatedMetroConfig(defaultConfig);
