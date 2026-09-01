@@ -42,3 +42,6 @@ yarn-error.*
 
 # npm (use pnpm)
 package-lock.json
+
+# 私有执行记录与内部文档：只暴露目录名，防止新 clone 误提交
+/docs_private/

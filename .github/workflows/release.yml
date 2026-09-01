@@ -210,5 +210,34 @@ jobs:
             echo "tag=reanimated3" >> "$GITHUB_OUTPUT"
           fi
 
+      # Reanimated 3 发布线必须完全不依赖 Worklets：检查 package.json 全部四个
+      # dependency 字段与 pnpm-lock.yaml，命中即在 npm publish 前退出。
+      # 拒绝策略、测试与文档中出现 react-native-worklets 字样不算失败。
+      - name: Block react-native-worklets in Reanimated 3 package
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const fields = ["dependencies", "peerDependencies", "optionalDependencies", "devDependencies"];
+            let blocked = false;
+            for (const field of fields) {
+              if (pkg[field] && pkg[field]["react-native-worklets"]) {
+                console.error("::error::react-native-worklets found in package.json " + field);
+                blocked = true;
+              }
+            }
+            if (fs.readFileSync("pnpm-lock.yaml", "utf8").includes("react-native-worklets")) {
+              console.error("::error::react-native-worklets found in pnpm-lock.yaml");
+              blocked = true;
+            }
+            process.exit(blocked ? 1 : 0);
+          '
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "::error::Aborting Reanimated 3 publish because react-native-worklets is present"
+            exit 1
+          fi
+          echo "OK: no react-native-worklets in package metadata or lockfile"
+
       - name: Publish to npm
         run: npm publish --provenance --access public --tag "${{ steps.dist-tag.outputs.tag }}"
