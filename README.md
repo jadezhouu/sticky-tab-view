@@ -2,7 +2,17 @@
 
 > 中文文档：[README.zh-CN.md](./README.zh-CN.md)
 
+> **⚠️ Legacy maintenance line (1.x)**: this line targets `react-native-reanimated@3`
+> (no Worklets). It is maintained for existing Reanimated 3 apps. **New projects should
+> use the current main line `2.x` (Reanimated 4)** — see the
+> [Reanimated 4 README](https://github.com/jadezhouu/sticky-tab-view#readme).
+>
+> Install this line explicitly by dist-tag (`reanimated3-next` for prereleases,
+> `reanimated3` for stable) and pin `package.json` to `^1.0.0` or an exact `1.x`.
+
 React Native components for a gesture-responsive collapsible header, horizontal tab paging, synchronized scrolling, and masonry layouts. Built on `react-native-reanimated` and `react-native-gesture-handler`.
+
+Changelog: [CHANGELOG.md](./CHANGELOG.md) · [GitHub Releases](https://github.com/jadezhouu/sticky-tab-view/releases)
 
 <p align="center">
   <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0/sticky-tab-view-demo.mp4">
@@ -29,21 +39,25 @@ React Native components for a gesture-responsive collapsible header, horizontal 
 
 ## Requirements
 
-- **New Architecture (Fabric) is required.** This library is built for React Native's New Architecture only; the Paper / Legacy Architecture is not supported.
+- **Both New Architecture (Fabric) and Paper are supported** on the `1.x` line (each verified anchor is built in both architectures — see the compatibility matrix).
+- **No Worklets**: this line uses `react-native-reanimated@3`, whose worklet runtime is bundled — the separate `react-native-worklets` package must **not** be installed.
 - **Node.js `>=20.19.4`** is required for development and tooling.
 - This is an **ESM-only** package; no CommonJS build is provided.
 - The app must be mounted under [`GestureHandlerRootView`](#gesture-handler-root-view).
-- The Worklets Babel plugin must be active. Expo SDK 54 configures it through `babel-preset-expo`; React Native Community CLI projects configure it explicitly (see [Babel setup](#babel-setup)).
+- The Reanimated Babel plugin must be active. Expo SDK 53 configures it through `babel-preset-expo`; React Native Community CLI projects configure it explicitly (see [Babel setup](#babel-setup)).
 
 ## Installation
 
 ```bash
-npm install @jadezhou/sticky-tab-view
-# or
-pnpm add @jadezhou/sticky-tab-view
-# or
-yarn add @jadezhou/sticky-tab-view
+# Reanimated 3 line (1.x) — prerelease / stable
+npm install @jadezhou/sticky-tab-view@reanimated3-next   # prerelease
+# npm install @jadezhou/sticky-tab-view@reanimated3      # stable (once released)
+pnpm add @jadezhou/sticky-tab-view@reanimated3-next
+yarn add @jadezhou/sticky-tab-view@reanimated3-next
 ```
+
+> **Note**: `npm install @jadezhou/sticky-tab-view` (no dist-tag) installs the **2.x**
+> Reanimated 4 line — do not use that command for the Reanimated 3 line.
 
 ### Peer Dependencies
 
@@ -66,14 +80,34 @@ For React Native Community CLI, install versions within the listed peer ranges, 
 
 ### Compatibility Matrix
 
-This release line (Reanimated 3) is verified against two anchors:
+Peer boundaries (conditional pairing — see "Known invalid" below):
 
-| Anchor | React | React Native | RNGH     | Reanimated | Architecture          |
-| ------ | ----- | ------------ | -------- | ---------- | --------------------- |
-| Expo SDK 53 | 19.0.0 | 0.79.x | 2.24.x | 3.17.x | New Architecture (Fabric) |
-| RN Community CLI | 19.1.0 | 0.81.x | 2.28.x | 3.19.x | New Architecture (Fabric) |
+| Dependency                     | Required range     |
+| ------------------------------ | ------------------ |
+| `react`                        | `>=19.0.0 <20.0.0` |
+| `react-native`                 | `>=0.79.0 <0.82.0` |
+| `react-native-gesture-handler` | `>=2.24.0 <2.29.0` |
+| `react-native-reanimated`      | `>=3.17.4 <3.20.0` |
 
-Web/H5 is **not** part of the release contract; it is exercised only as an experimental build smoke (see [Platform Support](#platform-support)).
+**Verified anchors** — built in CI for both Paper and Fabric (device smoke pending):
+
+| Anchor | React | React Native | RNGH     | Reanimated | Architectures |
+| ------ | ----- | ------------ | -------- | ---------- | -------------- |
+| Expo SDK 53 | 19.0.0 | 0.79.x | 2.24.x | 3.17.x | Paper + Fabric |
+| RN Community CLI | 19.1.0 | 0.81.x | 2.28.x | 3.19.x | Paper + Fabric |
+
+**Upstream-compatible but unverified**: other combinations inside the peer ranges that
+Reanimated 3 supports upstream but this repository has not built/tested (e.g. RN 0.80 +
+Reanimated 3.18). They are expected to work but are not covered by CI or the release
+contract.
+
+**Known invalid**: the peer ranges cannot express the conditional pairing between RN and
+Reanimated. In particular, **RN 0.81 must not be combined with Reanimated 3.17.x**
+(Reanimated 3.17.x supports RN 0.79 at most; RN 0.81 requires Reanimated 3.19.x). Verify
+the resolved versions with `npm ls` / `pnpm why` before building.
+
+Web/H5 is **not** part of the release contract; it is exercised only as an experimental
+build smoke (see [Platform Support](#platform-support)).
 
 ### Gesture Handler Root View
 
@@ -122,6 +156,16 @@ module.exports = {
 ```
 
 After changing the Babel config, restart Metro with a clean cache (for Expo: `pnpm --dir example start --clear`).
+
+> **Expo Go is not a release gate.** Expo Go is always New Architecture and bundles its
+> own JS/native patch, which does not match this repository's frozen lockfile versions.
+> Use a **Development Build** (`npx expo run:ios|android`) for real verification; treat
+> Expo Go only as an auxiliary Fabric smoke, and only when the exact Reanimated patch is
+> confirmed to match.
+
+> **Dependabot / Renovate**: do **not** auto-merge an upgrade to `2.x` (Reanimated 4)
+> on this maintenance line — it requires migrating to Reanimated 4 + Worklets. Treat any
+> such proposal as a manual migration task.
 
 Do **not** add `babel-preset-expo` if your project doesn't already use Expo — the library itself has no Expo dependency.
 
@@ -368,7 +412,7 @@ The package is ESM-only. Configure the consuming toolchain to resolve ESM, or us
 
 ## Reanimated 3 Compatibility Line
 
-This repository currently ships the **Reanimated 4** line (`2.x`). A future **Reanimated 3** compatibility line (`1.x`) is planned, published under the `reanimated3` / `reanimated3-next` dist-tags. It is **not yet available** — do not assume Reanimated 3 support from this release.
+This document describes the **Reanimated 3 compatibility line (`1.x`)**, published under the `reanimated3` / `reanimated3-next` dist-tags. The **Reanimated 4 main line (`2.x`)** (`latest` / `next`) is the current default. The two lines never cross dist-tags.
 
 ## Development
 

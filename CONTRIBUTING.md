@@ -85,3 +85,16 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
   - `reanimated3-next` dist-tag — Reanimated 3 prereleases.
 - The `latest` and `next` tags are never used for the Reanimated 3 line; the `reanimated3*` tags are never used for the Reanimated 4 line.
 - Changes are documented in `CHANGELOG.md` before each release.
+
+## Backporting to the Reanimated 3 Maintenance Line
+
+- **Never `git merge main` into `maintenance/reanimated-3`** (or into a PR branch of that
+  line). The maintenance branch diverges on dependency/config (Reanimated 3, no Worklets);
+  merging `main` reintroduces the Reanimated 4 / Worklets boundary.
+- Backport a fix with `git cherry-pick -x <sha>` so the commit keeps the original
+  upstream reference (`(cherry picked from commit …)`).
+- After a backport, every CI gate on `maintenance/reanimated-3` must pass before merge.
+- The maintenance branch receives **fixes only**, backported from `main`; feature
+  development happens on `main` (the 2.x line).
+- Dependency upgrade PRs (Dependabot/Renovate) on this line are **never auto-merged**;
+  upgrading to `2.x`/Reanimated 4 is a manual migration.
