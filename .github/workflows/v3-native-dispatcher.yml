@@ -200,11 +200,38 @@ jobs:
         working-directory: fixtures/rn-081/ios
         env:
           RCT_NEW_ARCH_ENABLED: ${{ matrix.arch == 'fabric' && '1' || '0' }}
-        run: pod install
+        run: |
+          # CocoaPods#12798（open flake）：monorepo + Paper（RCT_NEW_ARCH_ENABLED=0）下
+          # pod install 偶发 "ArgumentError - pathname contains null byte"，发生在生成 Pods
+          # 工程时、任何库代码编译之前；本仓库 rn081 paper 曾命中、fabric 同一步通过。
+          # 社区 workaround = 删 Pods/Podfile.lock 后全新安装；每次尝试都先清干净再装。
+          for attempt in 1 2 3; do
+            rm -rf Pods Podfile.lock
+            if pod install; then
+              echo "pod install OK (attempt ${attempt})"
+              exit 0
+            fi
+            echo "::warning::pod install failed on attempt ${attempt}/3; cleaning and retrying"
+            sleep 5
+          done
+          echo "::error::pod install failed after 3 attempts"
+          exit 1
       - name: Install iOS pods (Expo)
         if: ${{ matrix.anchor == 'expo53' && matrix.platform == 'ios' }}
         working-directory: example/ios
-        run: pod install
+        run: |
+          # 同 RN CLI 步骤：CocoaPods#12798 open flake 的干净安装重试。
+          for attempt in 1 2 3; do
+            rm -rf Pods Podfile.lock
+            if pod install; then
+              echo "pod install OK (attempt ${attempt})"
+              exit 0
+            fi
+            echo "::warning::pod install failed on attempt ${attempt}/3; cleaning and retrying"
+            sleep 5
+          done
+          echo "::error::pod install failed after 3 attempts"
+          exit 1
       - name: Build Android (gradle, ${{ matrix.arch }})
         if: ${{ matrix.platform == 'android' }}
         working-directory: ${{ matrix.anchor == 'expo53' && 'example/android' || 'fixtures/rn-081/android' }}
@@ -213,8 +240,12 @@ jobs:
         if: ${{ matrix.platform == 'ios' }}
         working-directory: ${{ matrix.anchor == 'expo53' && 'example/ios' || 'fixtures/rn-081/ios' }}
         run: |
-          xcodebuild -workspace ${{ matrix.anchor == 'expo53' && 'StickyTabView.xcworkspace' || 'StickyTabViewFixture.xcworkspace' }} \
-            -scheme ${{ matrix.anchor == 'expo53' && 'StickyTabView' || 'StickyTabViewFixture' }} \
+          # Expo prebuild 按 app.json 的 name（sticky-tab-view）生成全小写工程：target /
+          # workspace / scheme 都是 stickytabview（本地 prebuild + xcodebuild -list 已验证）。
+          # 旧值 StickyTabView.xcworkspace 靠 macOS 大小写不敏感侥幸解析到
+          # stickytabview.xcworkspace，但 scheme 名对不上，xcodebuild exit 65（首次执行暴露）。
+          xcodebuild -workspace ${{ matrix.anchor == 'expo53' && 'stickytabview.xcworkspace' || 'StickyTabViewFixture.xcworkspace' }} \
+            -scheme ${{ matrix.anchor == 'expo53' && 'stickytabview' || 'StickyTabViewFixture' }} \
             -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO build
 
