@@ -14,10 +14,9 @@ name: Release
 #
 # 版本策略（与 CONTRIBUTING / CHANGELOG 一致）：
 #   - tag `v${version}` 必须与 package.json version 完全一致
-#   - 当前发布线必须是 2.x（Reanimated 4）；其他 major 一律阻断
-#   - version 含预发布段（如 2.0.0-beta.0）→ `next`；稳定版（如 2.0.0）→ `latest`
-#   - 未来 Reanimated 3 兼容线（1.x）使用独立的 `reanimated3` / `reanimated3-next`
-#     tag，将在单独的 job 中实现，不与本 job 的 dist-tag 逻辑混用。
+#   - 2.x（Reanimated 4）预发布 → `next`，稳定版 → `latest`
+#   - 1.x（Reanimated 3）预发布 → `reanimated3-next`，稳定版 → `reanimated3`
+#   - 两条发布线按 Git tag major 互斥路由，避免 v1 Release 触发 v2 job 后标红。
 
 on:
   release:
@@ -43,8 +42,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
-    name: Publish to npm
+  publish-reanimated4:
+    name: Publish Reanimated 4 line to npm
+    if: ${{ startsWith(github.event.release.tag_name || inputs.tag, 'v2.') }}
     runs-on: ubuntu-latest
     environment: npm-release
     steps:
@@ -127,8 +127,88 @@ jobs:
       - name: Publish to npm
         run: npm publish --provenance --access public --tag "${{ steps.dist-tag.outputs.tag }}"
 
-  # 未来 Reanimated 3 兼容线（1.x）发布 job 占位：使用 `reanimated3` / `reanimated3-next`
-  # dist-tag，且触发条件与主线（2.x）区分。当前 1.x 尚未实现，故不启用。
-  # publish-reanimated3:
-  #   name: Publish Reanimated 3 line
-  #   if: false
+  publish-reanimated3:
+    name: Publish Reanimated 3 line to npm
+    if: ${{ startsWith(github.event.release.tag_name || inputs.tag, 'v1.') }}
+    runs-on: ubuntu-latest
+    # 当前 npm Trusted Publisher 已绑定这个受保护 environment；保留同一审批面，
+    # 以免切换 environment 后 OIDC 身份与 npm 配置失配。
+    environment: npm-release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+
+      - name: Verify manual release target
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "${RELEASE_TAG}" != v* ]]; then
+            echo "::error::Release tag must start with v, got ${RELEASE_TAG}"
+            exit 1
+          fi
+          RELEASE_JSON="$(gh release view "${RELEASE_TAG}" --json tagName,isDraft)"
+          if [[ "$(jq -r '.tagName' <<< "${RELEASE_JSON}")" != "${RELEASE_TAG}" ]]; then
+            echo "::error::Release tag does not match ${RELEASE_TAG}"
+            exit 1
+          fi
+          if [[ "$(jq -r '.isDraft' <<< "${RELEASE_JSON}")" == "true" ]]; then
+            echo "::error::Release ${RELEASE_TAG} is still a draft"
+            exit 1
+          fi
+
+      - name: Verify Reanimated 3 maintenance branch
+        run: |
+          git fetch origin maintenance/reanimated-3:refs/remotes/origin/maintenance/reanimated-3
+          if ! git merge-base --is-ancestor HEAD origin/maintenance/reanimated-3; then
+            echo "::error::${RELEASE_TAG} is not reachable from maintenance/reanimated-3"
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Ensure npm >= 11.5.1
+        run: |
+          echo "node: $(node --version)"
+          echo "npm before: $(npm --version)"
+          if [[ "$(npm --version | cut -d. -f1)" -lt 11 ]]; then
+            npm install -g npm@11.5.1
+          fi
+          echo "npm after: $(npm --version)"
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm release:check
+      - run: pnpm smoke:consumer
+
+      - name: Verify Reanimated 3 version policy
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          REF_TAG="${RELEASE_TAG#v}"
+          if [[ "${REF_TAG}" != "${VERSION}" ]]; then
+            echo "::error::Tag v${REF_TAG} does not match package.json version ${VERSION}"
+            exit 1
+          fi
+          MAJOR="${VERSION%%\.*}"
+          if [[ "${MAJOR}" != "1" ]]; then
+            echo "::error::Reanimated 3 release line must be 1.x, got ${VERSION}"
+            exit 1
+          fi
+
+      - name: Derive Reanimated 3 dist-tag
+        id: dist-tag
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "tag=reanimated3-next" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=reanimated3" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public --tag "${{ steps.dist-tag.outputs.tag }}"
