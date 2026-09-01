@@ -61,7 +61,16 @@ ARCH=paper npx expo run:ios --configuration Release
 
 ### 2.2 RN CLI 0.81 锚点（`fixtures/rn-081/`）
 
-原生工程**已提交**（`fixtures/rn-081/android|ios`），架构由构建命令直接切换：
+原生工程**已提交**（`fixtures/rn-081/android|ios`），架构由构建命令直接切换。
+
+> **pnpm 前置**：fixture 的 `settings.gradle`（来自 RN 0.81 官方模板）用相对路径
+> `../node_modules/@react-native/gradle-plugin` 引用 `@react-native/gradle-plugin`。
+> 这是 `react-native` 的传递依赖，npm/yarn 会把它 hoist 到 app 根，pnpm 的隔离
+> `node_modules` 不会——因此必须在 `fixtures/rn-081/package.json` 的 devDependencies 里
+> **显式声明** `@react-native/gradle-plugin: 0.81.5`（与 `react-native` 0.81.5 用同一
+> lockfile 条目），gradle 的 `includeBuild` 才能解析。CI 的 RN CLI 锚点构建靠这条声明
+> 通过（V3-6-03 初次 CI 曾以
+> `Included build '.../node_modules/@react-native/gradle-plugin' does not exist` 失败）。
 
 **Android：**
 
