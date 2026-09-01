@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
-# 真实 tarball consumer smoke：在仓库外安装 tarball 并编译全部公共 API。
+# 真实 tarball consumer smoke（Reanimated 3 维护线，两套外部安装）。
 #
-# 验证目标（对应 PUB-C05 / P1-01）：
+# 验证目标：
 #   - 从 npm pack 生成的 tarball 安装成功
-#   - peer dependency 安装**不使用 --legacy-peer-deps**，证明 peer 声明本身无冲突
+#   - peer dependency 安装**不使用 --legacy-peer-deps**，证明总体兼容边界本身无冲突
 #   - 全部公共 value/type export 可通过 TypeScript import（bundler 解析）
 #   - 同一 tarball 以 moduleResolution=nodenext 编译，证明 ESM 声明可被 NodeNext 消费者解析
 #   - `./package.json` subpath 可通过 exports 解析
 #   - 入口通过 exports map 正确解析为 ESM（import 条件）
-#   - 不依赖 workspace symlink、src 路径或仓库 node_modules 提升
+#   - 两个已核实锚点（Expo SDK 53 / RN CLI 0.81）的外部安装都不依赖 workspace symlink
+#
+# 两套锚点（R3-001 总体兼容边界的已验证子集）：
+#   ANCHOR_1 = Expo SDK 53 : react 19.0 / RN 0.79.6 / RNGH 2.24 / Reanimated 3.17
+#   ANCHOR_2 = RN CLI 0.81 : react 19.1 / RN 0.81.5 / RNGH 2.28 / Reanimated 3.19
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -29,9 +33,53 @@ echo "==> Packing tarball"
 TARBALL_NAME="$(npm pack --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s)[0].filename))')"
 TARBALL="$ROOT/$TARBALL_NAME"
 
-echo "==> Setting up consumer in $TMP"
-cd "$TMP"
-cat > package.json <<'EOF'
+compile_public_api() {
+  local anchor="$1" consumer="$2"
+  echo "==> [${anchor}] Compiling public API imports (TypeScript)"
+  ./node_modules/.bin/tsc \
+    --noEmit \
+    --strict \
+    --module esnext \
+    --moduleResolution bundler \
+    --target es2020 \
+    --skipLibCheck \
+    --jsx react-jsx \
+    index.ts
+  echo "    [${anchor}] bundler resolution: OK"
+
+  echo "==> [${anchor}] Compiling public API imports (moduleResolution=nodenext)"
+  ./node_modules/.bin/tsc \
+    --noEmit \
+    --strict \
+    --module nodenext \
+    --moduleResolution nodenext \
+    --target es2020 \
+    --skipLibCheck \
+    --jsx react-jsx \
+    index.ts
+  echo "    [${anchor}] nodenext resolution: OK"
+
+  echo "==> [${anchor}] Verifying exports resolution (import + package.json subpath)"
+  node --input-type=module -e '
+import assert from "node:assert";
+const entry = import.meta.resolve("@jadezhou/sticky-tab-view");
+const pkgjson = import.meta.resolve("@jadezhou/sticky-tab-view/package.json");
+assert.match(entry, /dist\/index\.js$/);
+assert.match(pkgjson, /package\.json$/);
+console.log("    entry resolved:", entry);
+console.log("    package.json resolved:", pkgjson);
+'
+  cd "$consumer"
+}
+
+run_anchor() {
+  local anchor="$1"
+  shift
+  local consumer="$TMP/consumer-$anchor"
+  echo "==> [${anchor}] Setting up consumer in $consumer"
+  mkdir -p "$consumer"
+  cd "$consumer"
+  cat > package.json <<'EOF'
 {
   "name": "consumer-smoke",
   "private": true,
@@ -39,21 +87,16 @@ cat > package.json <<'EOF'
 }
 EOF
 
-echo "==> Installing tarball + peer dependencies (no --legacy-peer-deps)"
-npm install \
-  --ignore-scripts \
-  --no-audit \
-  --no-fund \
-  "$TARBALL" \
-  react@19.1.0 \
-  react-native@0.81.5 \
-  react-native-gesture-handler@2.28.0 \
-  react-native-reanimated@4.1.1 \
-  react-native-worklets@0.5.2 \
-  typescript@5.9.2
+  echo "==> [${anchor}] Installing tarball + peer dependencies (no --legacy-peer-deps)"
+  npm install \
+    --ignore-scripts \
+    --no-audit \
+    --no-fund \
+    "$TARBALL" \
+    "$@" \
+    typescript@5.9.2
 
-echo "==> Compiling public API imports (TypeScript)"
-cat > index.ts <<'EOF'
+  cat > index.ts <<'EOF'
 import {
   StickyTabView,
   ElasticScrollView,
@@ -103,38 +146,21 @@ void (null as unknown as TPanHandler);
 void (null as unknown as TSectionData<unknown>);
 EOF
 
-./node_modules/.bin/tsc \
-  --noEmit \
-  --strict \
-  --module esnext \
-  --moduleResolution bundler \
-  --target es2020 \
-  --skipLibCheck \
-  --jsx react-jsx \
-  index.ts
-echo "    bundler resolution: OK"
+  compile_public_api "$anchor" "$consumer"
+}
 
-echo "==> Compiling public API imports (moduleResolution=nodenext)"
-./node_modules/.bin/tsc \
-  --noEmit \
-  --strict \
-  --module nodenext \
-  --moduleResolution nodenext \
-  --target es2020 \
-  --skipLibCheck \
-  --jsx react-jsx \
-  index.ts
-echo "    nodenext resolution: OK"
+# ANCHOR_1: Expo SDK 53
+run_anchor "expo-sdk-53" \
+  react@19.0.0 \
+  react-native@0.79.6 \
+  react-native-gesture-handler@2.24.0 \
+  react-native-reanimated@3.17.4
 
-echo "==> Verifying exports resolution (import + package.json subpath)"
-node --input-type=module -e '
-import assert from "node:assert";
-const entry = import.meta.resolve("@jadezhou/sticky-tab-view");
-const pkgjson = import.meta.resolve("@jadezhou/sticky-tab-view/package.json");
-assert.match(entry, /dist\/index\.js$/);
-assert.match(pkgjson, /package\.json$/);
-console.log("entry resolved:", entry);
-console.log("package.json resolved:", pkgjson);
-'
+# ANCHOR_2: RN CLI 0.81
+run_anchor "rn-cli-081" \
+  react@19.1.0 \
+  react-native@0.81.5 \
+  react-native-gesture-handler@2.28.0 \
+  react-native-reanimated@3.19.5
 
-echo "==> Consumer smoke passed"
+echo "==> Consumer smoke passed (both anchors)"
