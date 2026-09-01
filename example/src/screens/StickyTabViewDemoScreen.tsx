@@ -20,13 +20,13 @@ import {
   Image,
 } from "react-native";
 import Reanimated, {
+  runOnJS,
   SharedValue,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import { scheduleOnRN } from "react-native-worklets";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -474,7 +474,7 @@ function DemoTabBar({ activeHeaderOffset, current, onSelect, ys }: TabBarProps) 
   useAnimatedReaction(
     () => current.value,
     (next, prev) => {
-      if (next !== prev) scheduleOnRN(setCurJS, next);
+      if (next !== prev) runOnJS(setCurJS)(next);
     },
   );
 

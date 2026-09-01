@@ -1,6 +1,6 @@
 {
   "name": "@jadezhou/sticky-tab-view",
-  "version": "2.0.0",
+  "version": "1.0.0-beta.0",
   "description": "High-performance React Native components: collapsible header, horizontal tab paging, and gesture-driven scroll synchronization.",
   "license": "MIT",
   "author": "jadezhou",
@@ -48,25 +48,27 @@
     "build:watch": "rm -rf dist && tsc --project tsconfig.build.json --watch",
     "prepublishOnly": "pnpm release:check",
     "pretest:package": "pnpm build",
-    "test:package": "jest tests/exports.test.ts --runInBand",
-    "test:unit": "jest tests/remediation.test.ts tests/benchmark-data.test.ts tests/sticky-tab-demo.test.ts tests/release-workflow.test.ts --runInBand",
+    "test:package": "jest tests/exports.test.ts tests/config-contract.test.ts tests/anchor-resolution.test.ts --runInBand",
+    "test:unit": "jest tests/remediation.test.ts tests/benchmark-data.test.ts tests/sticky-tab-demo.test.ts tests/release-workflow.test.ts tests/runonjs-contract.test.ts --runInBand",
     "test:component": "jest tests/components tests/benchmark-controls.test.tsx --runInBand",
     "test": "pnpm test:package && pnpm test:unit && pnpm test:component",
     "typecheck": "tsc --noEmit",
+    "typecheck:example": "pnpm --dir example exec tsc --noEmit",
+    "typecheck:fixture": "pnpm --dir fixtures/rn-081 exec tsc --noEmit",
     "lint": "eslint src tests --max-warnings=0",
     "format:check": "prettier --check src tests",
-    "release:check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm --dir example exec tsc --noEmit && npm pack --dry-run && pnpm smoke:consumer",
+    "verify:reanimated3": "node scripts/verify-reanimated3-contract.mjs",
+    "release:check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm typecheck:example && pnpm typecheck:fixture && npm pack --dry-run && pnpm verify:reanimated3 && pnpm smoke:consumer",
     "smoke:consumer": "bash scripts/consumer-smoke.sh"
   },
   "dependencies": {
     "lodash": "^4.17.23"
   },
   "peerDependencies": {
-    "react": ">=19.1.0 <20.0.0",
-    "react-native": ">=0.81.0 <0.82.0",
-    "react-native-gesture-handler": ">=2.28.0 <2.29.0",
-    "react-native-reanimated": ">=4.1.0 <4.2.0",
-    "react-native-worklets": ">=0.5.0 <0.6.0"
+    "react": ">=19.0.0 <20.0.0",
+    "react-native": ">=0.79.0 <0.82.0",
+    "react-native-gesture-handler": ">=2.24.0 <2.29.0",
+    "react-native-reanimated": ">=3.17.4 <3.20.0"
   },
   "packageManager": "pnpm@10.4.1",
   "engines": {
@@ -86,8 +88,7 @@
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
-    "react-native-reanimated": "~4.1.1",
-    "react-native-worklets": "~0.5.2",
+    "react-native-reanimated": "3.19.5",
     "react-test-renderer": "19.1.0",
     "ts-jest": "^29.4.12",
     "typescript": "~5.9.2",

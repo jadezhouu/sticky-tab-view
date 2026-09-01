@@ -1,0 +1,24 @@
+{
+  "name": "sticky-tab-view-fixture-rn081",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RN CLI 0.81 anchor consumer fixture for @jadezhou/sticky-tab-view (Reanimated 3 line)",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "start": "react-native start"
+  },
+  "dependencies": {
+    "@jadezhou/sticky-tab-view": "workspace:*",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-gesture-handler": "~2.28.0",
+    "react-native-reanimated": "3.19.5"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@react-native/babel-preset": "^0.81.0",
+    "@react-native/metro-config": "^0.81.0",
+    "@types/react": "~19.1.10",
+    "typescript": "~5.9.2"
+  }
+}

@@ -7,6 +7,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'node:child_process';
 
 const ROOT = path.resolve(__dirname, '..');
 const DIST = path.join(ROOT, 'dist');
@@ -119,11 +120,10 @@ describe('package.json compliance', () => {
 
   test('peer dependencies match the verified compatibility matrix', () => {
     expect(pkg.peerDependencies).toEqual({
-      react: '>=19.1.0 <20.0.0',
-      'react-native': '>=0.81.0 <0.82.0',
-      'react-native-gesture-handler': '>=2.28.0 <2.29.0',
-      'react-native-reanimated': '>=4.1.0 <4.2.0',
-      'react-native-worklets': '>=0.5.0 <0.6.0',
+      react: '>=19.0.0 <20.0.0',
+      'react-native': '>=0.79.0 <0.82.0',
+      'react-native-gesture-handler': '>=2.24.0 <2.29.0',
+      'react-native-reanimated': '>=3.17.4 <3.20.0',
     });
   });
 
@@ -405,5 +405,63 @@ describe('public API snapshot', () => {
     for (const name of internalTypes) {
       expect(entry).not.toContain(name);
     }
+  });
+});
+
+// ── 7. Reanimated 3 维护线契约（PR-1）───────────────────
+
+/**
+ * 以下测试定义「v3 已完成」的最小技术事实。当前（2.0.0 / Reanimated 4）状态下
+ * 按预期失败；PR-1 迁移后必须全部转绿。拒绝策略、测试与文档中出现
+ * react-native-worklets 字样不算失败。
+ */
+describe('Reanimated 3 line contract (PR-1)', () => {
+  const v3pkg = JSON.parse(
+    fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8'),
+  );
+
+  test('version major is 1', () => {
+    expect(v3pkg.version).toMatch(/^1\./);
+  });
+
+  test('peerDependencies use the overall compatibility boundary without Worklets', () => {
+    expect(v3pkg.peerDependencies).toEqual({
+      react: '>=19.0.0 <20.0.0',
+      'react-native': '>=0.79.0 <0.82.0',
+      'react-native-gesture-handler': '>=2.24.0 <2.29.0',
+      'react-native-reanimated': '>=3.17.4 <3.20.0',
+    });
+  });
+
+  test('no react-native-worklets in any package dependency field', () => {
+    for (const field of ['dependencies', 'peerDependencies', 'optionalDependencies', 'devDependencies']) {
+      const deps = v3pkg[field] || {};
+      expect(Object.keys(deps)).not.toContain('react-native-worklets');
+    }
+  });
+
+  test('compiled dist output does not import react-native-worklets', () => {
+    const jsFiles = listFiles(DIST).filter((f) => f.endsWith('.js'));
+    expect(jsFiles.length).toBeGreaterThan(0);
+    // 只匹配真实 import/require 语句，忽略源码注释里对包名的普通提及。
+    const importRe =
+      /(?:from\s*["']react-native-worklets|import\s*["']react-native-worklets["']|require\s*\(\s*["']react-native-worklets)/;
+    const offenders = jsFiles.filter((f) => {
+      const content = fs.readFileSync(path.join(DIST, f), 'utf-8');
+      return importRe.test(content);
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  test('tarball content (npm pack dry-run) has no worklets and no src/', () => {
+    const out = execSync('npm pack --dry-run --json', {
+      cwd: ROOT,
+      encoding: 'utf-8',
+    });
+    // 确认确实打包了 dist 入口，而不是空打包（npm pack --json 的 path 相对包根）。
+    expect(out).toContain('dist/index.js');
+    // tarball 内容（文件清单）不得出现 worklets；也绝不允许打包 src/。
+    expect(out).not.toContain('react-native-worklets');
+    expect(out).not.toContain('src/');
   });
 });

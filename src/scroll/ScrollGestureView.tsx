@@ -2,12 +2,12 @@ import React from "react";
 import { View } from "react-native";
 import Reanimated, {
   cancelAnimation,
+  runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import { scheduleOnRN } from "react-native-worklets";
 // Reanimated v3 移除了 useAnimatedGestureHandler，改用 Gesture API
 import { Gesture, GestureDetector, State } from "react-native-gesture-handler";
 import { PullHeaderState } from "../refresh/PullRefreshHeader.js";
@@ -293,7 +293,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
     (res, pre) => {
       if (res === true && res !== pre) {
         canLoadMore.value = false;
-        scheduleOnRN(handleLoadMore);
+        runOnJS(handleLoadMore)();
       }
     },
   );
@@ -313,7 +313,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
     () => ({ x: x.value, y: y.value }),
     (offset, previous) => {
       if (!previous || offset.x !== previous.x || offset.y !== previous.y) {
-        if (onScroll) scheduleOnRN(onScroll, offset);
+        if (onScroll) runOnJS(onScroll)(offset);
       }
     },
     [onScroll],
@@ -338,8 +338,8 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
         ctx.priority = 0;
         if (refreshStatus.value === "settling") refreshStatus.value = "idle";
         ctx.last = { x: evt.absoluteX, y: evt.absoluteY };
-        if (onTouchBegin) scheduleOnRN(onTouchBegin);
-        if (onScrollBeginDrag) scheduleOnRN(onScrollBeginDrag);
+        if (onTouchBegin) runOnJS(onTouchBegin)();
+        if (onScrollBeginDrag) runOnJS(onScrollBeginDrag)();
       },
       onActive: (evt: TPanEvent, ctx: TGestureContext) => {
         "worklet";
@@ -350,7 +350,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
         }
         if (dragToHideKeyboard && !ctx.keyboardDismissed) {
           ctx.keyboardDismissed = true;
-          scheduleOnRN(dismissKeyboard);
+          runOnJS(dismissKeyboard)();
         }
         if (!ctx.isForwarded) parent.onActive?.(evt, ctx);
 
@@ -382,7 +382,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
               shouldChange = true;
             }
             if (shouldChange) {
-              scheduleOnRN(notifyRefreshState, refreshStatus.value);
+              runOnJS(notifyRefreshState)(refreshStatus.value);
             }
           }
         }
@@ -391,8 +391,8 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
       onEnd: (evt: TPanEvent, ctx: TGestureContext) => {
         "worklet";
         if (!focus.value && !ctx.isForwarded) return parent.onEnd?.(evt, ctx);
-        if (onTouchEnd) scheduleOnRN(onTouchEnd);
-        if (onScrollEndDrag) scheduleOnRN(onScrollEndDrag);
+        if (onTouchEnd) runOnJS(onTouchEnd)();
+        if (onScrollEndDrag) runOnJS(onScrollEndDrag)();
         const maxX = getMaxOffset(contentSize.width.value, size.width.value, right);
         const maxY = getMaxOffset(contentSize.height.value, size.height.value, bottom);
         const vx = -evt.velocityX;
@@ -437,7 +437,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
                 y.value < -top - pullRefreshHeaderHeight
               ) {
                 refreshStatus.value = "refreshing";
-                scheduleOnRN(handleRefresh);
+                runOnJS(handleRefresh)();
               }
               if (refreshStatus.value === "refreshing") {
                 to -= pullRefreshHeaderHeight;
@@ -521,8 +521,8 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
         "worklet";
         const maxX = getMaxOffset(contentSize.width.value, size.width.value, right);
         const maxY = getMaxOffset(contentSize.height.value, size.height.value, bottom);
-        if (onTouchEnd) scheduleOnRN(onTouchEnd);
-        if (onScrollEndDrag) scheduleOnRN(onScrollEndDrag);
+        if (onTouchEnd) runOnJS(onTouchEnd)();
+        if (onScrollEndDrag) runOnJS(onScrollEndDrag)();
         if (!focus.value) return;
         if (pagingEnabled === "horizontal") {
           const pageWidth =
@@ -579,7 +579,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
   // 将 panHandler 写入 StickyTabContext 的 SharedValue。
   // SharedValue.value = newValue 是 Reanimated 的正式 API：
   //   - 不受 React 19 深度冻结限制（SharedValue 是 JSI host 对象）
-  //   - 不受 react-native-worklets "converted to serializable" 限制
+  //   - SharedValue 始终可以通过 .value = newValue 安全更新，不受序列化限制约束
   //   - worklet 线程通过 .value 读取时始终获得最新值
   React.useEffect(() => {
     stickyTabContext.handlersMutable.value = {
@@ -634,7 +634,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
           panHandler!.onStart?.(e, ctx);
           gestureCtx.value = ctx;
         } catch (err) {
-          scheduleOnRN(logWorkletError, "onStart", String(err));
+          runOnJS(logWorkletError)("onStart", String(err));
         }
       })
       .onUpdate((e) => {
@@ -645,7 +645,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
           panHandler!.onActive?.(e, ctx);
           gestureCtx.value = ctx;
         } catch (err) {
-          scheduleOnRN(logWorkletError, "onUpdate", String(err));
+          runOnJS(logWorkletError)("onUpdate", String(err));
         }
       })
       .onEnd((e) => {
@@ -655,7 +655,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
           panHandler!.onEnd?.(e, ctx);
           gestureCtx.value = ctx;
         } catch (err) {
-          scheduleOnRN(logWorkletError, "onEnd", String(err));
+          runOnJS(logWorkletError)("onEnd", String(err));
         }
       })
       .onFinalize((_e, success) => {
@@ -672,7 +672,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
             gestureCtx.value = ctx;
           }
         } catch (err) {
-          scheduleOnRN(logWorkletError, "onFinalize", String(err));
+          runOnJS(logWorkletError)("onFinalize", String(err));
         }
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -684,7 +684,7 @@ export const ScrollGestureView = (props: TElasticScrollViewCoreProps) => {
         .enabled(!!tapToHideKeyboard)
         .onEnd(() => {
           "worklet";
-          scheduleOnRN(dismissKeyboard);
+          runOnJS(dismissKeyboard)();
         }),
     [tapToHideKeyboard],
   );

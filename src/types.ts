@@ -192,8 +192,7 @@ export interface TStickyTabContext {
   contentOffset?: { y: SharedValue<number> };
   // SharedValue 是 Reanimated 跨 JS/worklet 线程安全读写的唯一机制：
   // - React 19 会深度冻结 context value，但 SharedValue 是 JSI host 对象，冻结对它无效
-  // - react-native-worklets 的 "converted to serializable" 限制只针对普通 JS 对象，
-  //   SharedValue 始终可以通过 .value = newValue 安全更新
+  // - SharedValue 始终可以通过 .value = newValue 安全更新，不受序列化限制约束
   handlersMutable: SharedValue<TScrollHandlers>;
 }
 

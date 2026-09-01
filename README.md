@@ -49,34 +49,29 @@ yarn add @jadezhou/sticky-tab-view
 
 Your app must already use the compatible React and React Native versions shown below. Do not use this library's installation command to upgrade an existing app's `react` or `react-native` version.
 
-For an Expo SDK 54 project, install compatible native peers with Expo:
+For an Expo SDK 53 project, install compatible native peers with Expo:
 
 ```bash
-npx expo install react-native-gesture-handler react-native-reanimated react-native-worklets
+npx expo install react-native-gesture-handler react-native-reanimated
 ```
 
 For React Native Community CLI, install versions within the listed peer ranges, then rebuild the native app. Your package manager may install missing peer dependencies automatically; verify the resolved versions before running the app.
 
 | Dependency                     | Required range     |
 | ------------------------------ | ------------------ |
-| `react`                        | `>=19.1.0 <20.0.0` |
-| `react-native`                 | `>=0.81.0 <0.82.0` |
-| `react-native-gesture-handler` | `>=2.28.0 <2.29.0` |
-| `react-native-reanimated`      | `>=4.1.0 <4.2.0`   |
-| `react-native-worklets`        | `>=0.5.0 <0.6.0`   |
+| `react`                        | `>=19.0.0 <20.0.0` |
+| `react-native`                 | `>=0.79.0 <0.82.0` |
+| `react-native-gesture-handler` | `>=2.24.0 <2.29.0` |
+| `react-native-reanimated`      | `>=3.17.4 <3.20.0` |
 
 ### Compatibility Matrix
 
-This release supports and is verified against the following combination:
+This release line (Reanimated 3) is verified against two anchors:
 
-| Dependency                   | Version                        |
-| ---------------------------- | ------------------------------ |
-| React                        | 19.1.0                         |
-| React Native                 | 0.81.x                         |
-| react-native-gesture-handler | 2.28.x                         |
-| react-native-reanimated      | 4.1.x                          |
-| react-native-worklets        | 0.5.x                          |
-| Architecture                 | New Architecture (Fabric) only |
+| Anchor | React | React Native | RNGH     | Reanimated | Architecture          |
+| ------ | ----- | ------------ | -------- | ---------- | --------------------- |
+| Expo SDK 53 | 19.0.0 | 0.79.x | 2.24.x | 3.17.x | New Architecture (Fabric) |
+| RN Community CLI | 19.1.0 | 0.81.x | 2.28.x | 3.19.x | New Architecture (Fabric) |
 
 Web/H5 is **not** part of the release contract; it is exercised only as an experimental build smoke (see [Platform Support](#platform-support)).
 
@@ -98,9 +93,9 @@ export default function App() {
 
 ## Babel Setup
 
-The Worklets Babel plugin must be active for worklets to run. A missing or stale plugin configuration can produce errors such as `Failed to create a worklet`.
+The Reanimated Babel plugin must be active for worklets to run. A missing or stale plugin configuration can produce errors such as `Failed to create a worklet`.
 
-**Expo SDK 54** — `babel-preset-expo` includes the Worklets plugin by default. A standard Expo config needs no extra plugin entry:
+**Expo SDK 53** — `babel-preset-expo` detects `react-native-reanimated` and injects `react-native-reanimated/plugin` automatically. A standard Expo config needs no extra plugin entry:
 
 ```js
 module.exports = {
@@ -108,16 +103,25 @@ module.exports = {
 };
 ```
 
-If your Expo project has a custom Babel configuration, verify that the plugin remains active and add it only when it is not already provided by the preset.
+Do **not** add `react-native-reanimated/plugin` manually in an Expo project — that would duplicate the plugin. This library also recommends wrapping your Metro config with Reanimated 3's `wrapWithReanimatedMetroConfig` for readable worklet stack traces:
 
-**React Native Community CLI** — keep your existing preset and add the plugin:
+```js
+const { getDefaultConfig } = require('expo/metro-config');
+const { wrapWithReanimatedMetroConfig } = require('react-native-reanimated/metro-config');
+const config = getDefaultConfig(__dirname);
+module.exports = wrapWithReanimatedMetroConfig(config);
+```
+
+**React Native Community CLI** — keep your existing preset and add the plugin **as the last plugin**:
 
 ```js
 module.exports = {
   presets: ['module:@react-native/babel-preset'],
-  plugins: ['react-native-worklets/plugin'],
+  plugins: ['react-native-reanimated/plugin'],
 };
 ```
+
+After changing the Babel config, restart Metro with a clean cache (for Expo: `pnpm --dir example start --clear`).
 
 Do **not** add `babel-preset-expo` if your project doesn't already use Expo — the library itself has no Expo dependency.
 
@@ -350,9 +354,9 @@ The library's supported targets are iOS and Android. The Expo example retains an
 
 ## Troubleshooting
 
-### `Failed to create a worklet` or a Worklets version mismatch
+### `Failed to create a worklet` or a Reanimated version mismatch
 
-Confirm that the app uses the peer versions in the compatibility matrix, that the Worklets Babel plugin is active, and restart Metro with a clean cache. Rebuild the native app after installing or upgrading `react-native-reanimated` or `react-native-worklets`.
+Confirm that the app uses the peer versions in the compatibility matrix, that the Reanimated Babel plugin is active (see [Babel Setup](#babel-setup)), and restart Metro with a clean cache. Rebuild the native app after installing or upgrading `react-native-reanimated`.
 
 ### Gestures do not respond
 
