@@ -24,4 +24,7 @@ module.exports = {
   ...require('./app.json').expo,
   // SDK 53 顶部字段，prebuild 时同时驱动 android gradle.properties 与 iOS Podfile。
   newArchEnabled: arch === 'fabric',
+  // 追加本地 config plugin：每次 prebuild 后向 iOS Podfile 注入 fmt C++17 覆盖，
+  // 修复 Xcode 26 / Clang 21 下 RN 0.79 fmt 11.0.2 的 consteval 回归（CI/Xcode16 无害）。
+  plugins: [...(require('./app.json').expo.plugins || []), './plugins/with-fmt-cpp17'],
 };
