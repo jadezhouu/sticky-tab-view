@@ -14,23 +14,23 @@ Version lines:
 
 No unreleased changes yet.
 
-## [1.0.0-beta.0] — 2026-09-01
+## [1.0.0-beta.0] — unreleased
 
-First public prerelease of the Reanimated 3 compatibility line (`1.x`), published under
-the `reanimated3-next` dist-tag.
+Planned first public prerelease of the Reanimated 3 compatibility line (`1.x`), to be
+published under the `reanimated3-next` dist-tag (not yet published).
 
 ### Added
 
 - Reanimated 3 compatibility line (no Worklets — worklet runtime bundled in Reanimated 3).
-- Thread-scheduling adapter for the Reanimated 3 internal `scheduleOnReactNative` API.
+- Internal `scheduleOnReactNative` thread-scheduling adapter (not a public subpath) built on
+  Reanimated 3's public `runOnJS` API to schedule work on the React JS thread.
 
 ### Compatibility
 
-- **Paper and Fabric both build**, but only two representative Android combos are CI-verified:
-  Expo SDK 53 Paper (React 19.0.0 / RN 0.79.6 / RNGH 2.24.0 / Reanimated 3.17.5) and
-  RN Community CLI 0.81 Fabric (React 19.1.0 / RN 0.81.5 / RNGH 2.28.0 / Reanimated 3.19.5).
-  The full 8-combo matrix (× iOS/Android × Paper/Fabric) and device smoke are pending —
-  **not yet a release contract**.
+- **Paper and Fabric both build.** The full 8-combo native matrix (Expo SDK 53 & RN 0.81 ×
+  iOS/Android × Paper/Fabric) is CI-verified through the `v3-native-dispatcher`
+  release-candidate run. Device/UI runtime smoke is pending and is the remaining gate before
+  this becomes a release contract.
 - Peer ranges: React `>=19.0.0 <20.0.0`, RN `>=0.79.0 <0.82.0`,
   `react-native-gesture-handler` `>=2.24.0 <2.29.0`,
   `react-native-reanimated` `>=3.17.4 <3.20.0`. Conditional pairing: RN 0.81 requires

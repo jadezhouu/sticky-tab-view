@@ -70,13 +70,22 @@ cd android && ./gradlew assembleDebug && cd ..
 
 **iOS（nightly / release-candidate 才跑，PR 不要求）：**
 
-```bash
-# 先安装 CocoaPods 依赖（读 Podfile 里的 RCT_NEW_ARCH_ENABLED）
-ARCH=paper npx expo prebuild --clean --platform ios --no-install
-cd ios && pod install && cd ..
-ARCH=paper npx expo run:ios --configuration Release
+> **每个组合必须独立重装 Pods**：架构写在 Podfile.lock / 生成的 xcconfig 里，切换
+> Paper/Fabric 前先删除 `example/ios/Pods` 与 `Podfile.lock`，否则会复用上一架构产物。
 
-# Fabric 同理：ARCH=fabric
+```bash
+# Paper（RCT_NEW_ARCH_ENABLED=0）
+rm -rf example/ios/Pods example/ios/Podfile.lock
+ARCH=paper npx expo prebuild --clean --platform ios --no-install
+(cd example/ios && pod install && cd - >/dev/null)
+ARCH=paper npx expo run:ios --configuration Release
+# 记录最终架构：grep -R "RCT_NEW_ARCH_ENABLED" example/ios/Pods/Target\ Support\ Files/  | head
+
+# Fabric（RCT_NEW_ARCH_ENABLED=1）
+rm -rf example/ios/Pods example/ios/Podfile.lock
+ARCH=fabric npx expo prebuild --clean --platform ios --no-install
+(cd example/ios && pod install && cd - >/dev/null)
+ARCH=fabric npx expo run:ios --configuration Release
 ```
 
 ### 2.2 RN CLI 0.81 锚点（`fixtures/rn-081/`）
@@ -108,11 +117,17 @@ git checkout android/gradle.properties   # 恢复，避免把切架构留进提�
 
 **iOS（nightly / release-candidate）：**
 
+> 同 2.1：架构写在 Podfile.lock / xcconfig 里，每个组合先清 `Pods` 与 `Podfile.lock`。
+
 ```bash
-cd fixtures/rn-081/ios
-RCT_NEW_ARCH_ENABLED=1 pod install     # Fabric；Paper 用 RCT_NEW_ARCH_ENABLED=0
-cd ..
+# Fabric（RCT_NEW_ARCH_ENABLED=1）
+cd fixtures/rn-081/ios && rm -rf Pods Podfile.lock && RCT_NEW_ARCH_ENABLED=1 pod install && cd ..
 RCT_NEW_ARCH_ENABLED=1 npx react-native run-ios --configuration Release
+# 记录最终架构：grep -R "RCT_NEW_ARCH_ENABLED" fixtures/rn-081/ios/Pods/Target\ Support\ Files/ | head
+
+# Paper（RCT_NEW_ARCH_ENABLED=0）
+cd fixtures/rn-081/ios && rm -rf Pods Podfile.lock && RCT_NEW_ARCH_ENABLED=0 pod install && cd ..
+RCT_NEW_ARCH_ENABLED=0 npx react-native run-ios --configuration Release
 ```
 
 ## 3. 架构/锚点切换清理流程（V3-6-02）
@@ -146,8 +161,14 @@ rm -rf fixtures/rn-081/ios/Pods fixtures/rn-081/ios/Podfile.lock
 > **编排变更（P0-01）**：nightly / release-candidate 的全八组合矩阵、candidate SHA 校验与
 > attestation 统一由 **main** 上的 `.github/workflows/v3-native-dispatcher.yml` 编排（schedule 与
 > workflow_dispatch 只在默认分支生效）。本文档的命令供该工作流与人工设备冒烟使用。
+>
+> **run 定位语义（P0-01）**：dispatcher run 的 head_sha 是默认分支 main 的 SHA，不等于 job
+> 内 checkout 的 candidate；`tag-validation.yml` 按 `v3-candidate-attestation-<candidate
+> short-sha(12)>-<run-id>` 的 artifact 名反查 attestation，并核对 candidate/head/workflow_run_id
+> 与 matrix/gate conclusion、https 设备证据。
 
 CI 在每个锚点记录 `require.resolve`、`pnpm why --filter` 与 native autolinking 输出
 （`npx react-native config`），证明各自解析到自己的 React/RN/Reanimated/RNGH，无错误
 hoist。人工设备完成后，release-candidate 通过受保护输入 `device_evidence_url` 生成
-attestation artifact（含 candidate SHA、设备证据链接、审批者、时间）。
+attestation artifact（含 candidate SHA、设备证据链接、`triggered_by` 触发者、时间；真实
+environment reviewer 由部署审批记录单独保存）。
