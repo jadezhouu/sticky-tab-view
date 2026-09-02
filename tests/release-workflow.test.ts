@@ -69,3 +69,48 @@ describe('Reanimated 3 release line rejects Worklets (control plane gate)', () =
     expect(blockStep).toContain('::error::');
   });
 });
+
+describe('v3 dispatcher ↔ tag-validation integration contract (P0-01/P1-01/P2-02)', () => {
+  const dispatcher = readFileSync(
+    resolve(process.cwd(), '.github/workflows/v3-native-dispatcher.yml'),
+    'utf8',
+  );
+
+  test('attestation records triggered_by (triggering_actor), never claims an approver', () => {
+    // P1-01：github.triggering_actor 是触发 workflow 的账号，不是批准
+    // v3-candidate-attestation environment 的 reviewer；真实审批人由 deployment review
+    // 与设备证据单独保存。字段名必须保持 triggered_by，避免错误的审计含义。
+    expect(dispatcher).toContain('"triggered_by": "$TRIGGERED_BY"');
+    expect(dispatcher).toContain('TRIGGERED_BY: ${{ github.triggering_actor }}');
+    expect(dispatcher).not.toContain('"approver"');
+  });
+
+  test('pins head_sha to the resolved candidate, not the run head (P0-01 semantics)', () => {
+    // GitHub Actions 的 run head_sha 是默认分支 main 触发时的 SHA，与 job 内 checkout 的
+    // candidate 无关。attestation 的 head_sha 必须显式取自 v3-resolve-candidate 输出，
+    // 且 tag-validation 依赖的正是这个语义（不按 head_sha 定位 run）。
+    expect(dispatcher).toContain('"head_sha": "$CANDIDATE_SHA"');
+    expect(dispatcher).toContain(
+      'CANDIDATE_SHA: ${{ needs.v3-resolve-candidate.outputs.candidate_sha }}',
+    );
+    expect(dispatcher).toMatch(
+      /ref: \${{ needs\.v3-resolve-candidate\.outputs\.candidate_sha }}/,
+    );
+    // 生产端注释明确固定该语义，防止未来改回 head_sha == candidate 的错误假设。
+    expect(dispatcher).toContain('head_sha 是默认分支 main 在触发时的 SHA');
+  });
+
+  test('artifact name uses resolved candidate short-sha (12) + run id (P0-01 length contract)', () => {
+    // 消费端（maintenance/reanimated-3:tag-validation.yml）按同样的 :0:12 前缀反查 artifact。
+    expect(dispatcher).toContain('short_sha=${SHA:0:12}');
+    expect(dispatcher).toContain(
+      'name: v3-candidate-attestation-${{ needs.v3-resolve-candidate.outputs.short_sha }}-${{ github.run_id }}',
+    );
+  });
+
+  test('Metro bundle gate follows the matrix platform, not hardcoded android (P2-02)', () => {
+    const bundle = dispatcher.slice(dispatcher.indexOf('Metro bundle gate'));
+    expect(bundle).toContain('--platform ${{ matrix.platform }}');
+    expect(bundle).not.toContain('--platform android');
+  });
+});

@@ -16,8 +16,12 @@ name: V3 Native Dispatcher
 #       必须提供 candidate_sha（release 用的不可变 SHA），校验它属于
 #       maintenance/reanimated-3 后，所有 job 都 checkout 该 SHA 执行相同 gate。
 #       人工设备证据通过受保护输入 device_evidence_url 提供，v3-attestation 在
-#       js-gate + 全八矩阵全部成功后，把 candidate SHA / 结论 / 审批者固化进
+#       js-gate + 全八矩阵全部成功后，把 candidate SHA / 结论 / 触发者固化进
 #       attestation artifact（P0-03：attestation 依赖完整矩阵，且不伪装成自动设备测试）。
+#       注意（P0-01）：本 run 的 head_sha 是默认分支 main 在触发时的 SHA，与 job 内
+#       checkout 的 candidate SHA 无关（GitHub Actions 元数据语义）。tag-validation
+#       因此绝不按 head_sha == tag commit 定位本 run，而是按 artifact 名
+#       v3-candidate-attestation-<candidate short-sha(12)>-<run-id> 反查。
 #
 # 安全性（P0-02）：v3-resolve-candidate 先 checkout maintenance/reanimated-3 再跑 git 校验，
 # 任何 job 都不会在 checkout 之前执行 git 命令。candidate_sha 校验与 merge-base 祖先检查
@@ -172,17 +176,18 @@ jobs:
           node -e 'for (const m of ["react-native","react-native-reanimated","react-native-gesture-handler","react"]) console.log(m, "->", require.resolve(m, { paths: ["./node_modules"] }))'
           echo "### react-native config (autolinking)"
           npx react-native config | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=JSON.parse(s);console.log("deps:",Object.keys(d.dependencies||{}))})'
-      # Metro bundle gate（P1-05）：assembleDebug 不打包 JS，这里强制证明 Metro 能 bundle。
-      - name: Metro bundle gate (Expo anchor)
+      # Metro bundle gate（P1-05）：assembleDebug/xcodebuild 不依赖 JS bundle，这里按矩阵
+      # 平台强制证明 Metro 能 bundle（iOS 与 Android 都覆盖；P2-02：不再固定 android）。
+      - name: Metro bundle gate (Expo anchor, ${{ matrix.platform }})
         if: ${{ matrix.anchor == 'expo53' }}
         working-directory: example
         env:
           ARCH: ${{ matrix.arch }}
-        run: npx expo export --platform android --no-bytecode --output-dir .expo-export-gate
-      - name: Metro bundle gate (RN CLI anchor)
+        run: npx expo export --platform ${{ matrix.platform }} --no-bytecode --output-dir .expo-export-gate
+      - name: Metro bundle gate (RN CLI anchor, ${{ matrix.platform }})
         if: ${{ matrix.anchor == 'rn081' }}
         working-directory: fixtures/rn-081
-        run: pnpm exec react-native bundle --platform android --dev false --entry-file index.js --bundle-output /tmp/rn081.bundle --assets-dest /tmp/rn081-assets
+        run: pnpm exec react-native bundle --platform ${{ matrix.platform }} --dev false --entry-file index.js --bundle-output /tmp/rn081-${{ matrix.platform }}.bundle --assets-dest /tmp/rn081-${{ matrix.platform }}-assets
       - name: Prebuild (Expo, ${{ matrix.arch }})
         if: ${{ matrix.anchor == 'expo53' }}
         working-directory: example
@@ -201,10 +206,11 @@ jobs:
         env:
           RCT_NEW_ARCH_ENABLED: ${{ matrix.arch == 'fabric' && '1' || '0' }}
         run: |
-          # CocoaPods#12798（open flake）：monorepo + Paper（RCT_NEW_ARCH_ENABLED=0）下
-          # pod install 偶发 "ArgumentError - pathname contains null byte"，发生在生成 Pods
-          # 工程时、任何库代码编译之前；本仓库 rn081 paper 曾命中、fabric 同一步通过。
-          # 社区 workaround = 删 Pods/Podfile.lock 后全新安装；每次尝试都先清干净再装。
+          # CocoaPods#12798 的确定性触发点已在 fixture Podfile 修复：Podfile 用 node
+          # fs.realpathSync 把 reactNativePath 规整为 .pnpm 真实路径（相对 Podfile 目录），
+          # 使 CocoaPods 不再对 pnpm 符号链接 realdirpath（macOS arm64 + Ruby 3.3 NUL 损坏）。
+          # 下方 3 次重试保留为一般韧性措施（瞬时网络/磁盘/锁竞争），不再是 NUL 的
+          # workaround；若仍失败请先核对 fixture Podfile 的 realpath 覆盖是否生效（P2-02）。
           for attempt in 1 2 3; do
             rm -rf Pods Podfile.lock
             if pod install; then
@@ -220,7 +226,9 @@ jobs:
         if: ${{ matrix.anchor == 'expo53' && matrix.platform == 'ios' }}
         working-directory: example/ios
         run: |
-          # 同 RN CLI 步骤：CocoaPods#12798 open flake 的干净安装重试。
+          # Expo 锚点的 Podfile 由 expo prebuild 生成，未做 rn081 fixture 的 realpath 覆盖；
+          # RC 矩阵已证明 expo53 ios paper/fabric 可干净安装。重试仅为一般韧性措施
+          # （瞬时网络/磁盘/锁竞争），不再把 NUL 描述为未解决 flake（P2-02）。
           for attempt in 1 2 3; do
             rm -rf Pods Podfile.lock
             if pod install; then
@@ -251,8 +259,10 @@ jobs:
 
   # ─────────────────── 候选 attestation artifact（P0-03） ───────────────────
 
-  # 只做固化：人工设备证据由受保护输入提供，本 job 把 candidate SHA / 结论 / 审批者
+  # 只做固化：人工设备证据由受保护输入提供，本 job 把 candidate SHA / 结论 / 触发者
   # 写进 artifact，不伪装成自动设备测试。needs 全链成功才会运行。
+  # head_sha 字段取 candidate_sha（resolve job 输出），不是本 run 的 head_sha ——
+  # 后者是 main 在触发时的 SHA，与 candidate 无关（P0-01 语义，见文件头注释）。
   v3-attestation:
     name: V3 Candidate Attestation
     if: ${{ inputs.mode == 'release-candidate' && inputs.device_evidence_url != '' }}
@@ -277,7 +287,7 @@ jobs:
         env:
           CANDIDATE_SHA: ${{ needs.v3-resolve-candidate.outputs.candidate_sha }}
           RUN_ID: ${{ github.run_id }}
-          APPROVER: ${{ github.triggering_actor }}
+          TRIGGERED_BY: ${{ github.triggering_actor }}
           DEVICE_URL: ${{ inputs.device_evidence_url }}
         run: |
           mkdir -p attestation
@@ -289,7 +299,7 @@ jobs:
             "candidate_gate_conclusion": "${{ needs.v3-js-gate.result }}",
             "workflow_run_id": "$RUN_ID",
             "device_evidence_url": "$DEVICE_URL",
-            "approver": "$APPROVER",
+            "triggered_by": "$TRIGGERED_BY",
             "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           EOF
