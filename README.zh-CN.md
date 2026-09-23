@@ -144,6 +144,25 @@ module.exports = {
 ```
 
 在 Expo 项目中**不要**手动添加 `react-native-reanimated/plugin` —— 那会造成插件重复。
+
+> **pnpm / monorepo 例外**：如果自动注入的插件被解析到工作区根部的另一份
+> `react-native-reanimated`（与运行时副本版本不一致，报 `Mismatch between JavaScript code
+> version and Reanimated Babel plugin version`），则需显式关闭自动注入，并把插件钉到应用
+> 自己那一份。本仓库的 `example/babel.config.js` 即用此法，并由 V3-2-02 契约测试守护：
+>
+> ```js
+> module.exports = function (api) {
+>   api.cache(true);
+>   return {
+>     presets: [['babel-preset-expo', { reanimated: false }]],
+>     plugins: [require.resolve('react-native-reanimated/plugin')],
+>   };
+> };
+> ```
+>
+> `reanimated: false` 只关闭自动注入，不会少插件——有效配置里仍是恰好一个 Reanimated 插件。
+> 它与上面的"不要手动添加"并不冲突：**要么**自动注入、**要么**手动钉住，二者取其一。
+
 本库还建议用 Reanimated 3 的 `wrapWithReanimatedMetroConfig` 包装 Metro 配置，以获得可读的
 worklet 调用栈：
 

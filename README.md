@@ -137,7 +137,23 @@ module.exports = {
 };
 ```
 
-Do **not** add `react-native-reanimated/plugin` manually in an Expo project — that would duplicate the plugin. This library also recommends wrapping your Metro config with Reanimated 3's `wrapWithReanimatedMetroConfig` for readable worklet stack traces:
+Do **not** add `react-native-reanimated/plugin` manually in an Expo project — that would duplicate the plugin.
+
+> **pnpm / monorepo exception**: if the auto-injected plugin resolves to a different `react-native-reanimated` copy at the workspace root (a version mismatch against the runtime copy, reported as `Mismatch between JavaScript code version and Reanimated Babel plugin version`), disable auto-injection explicitly and pin the plugin to the app's own copy. This repository's `example/babel.config.js` does exactly that, guarded by the V3-2-02 contract test:
+>
+> ```js
+> module.exports = function (api) {
+>   api.cache(true);
+>   return {
+>     presets: [['babel-preset-expo', { reanimated: false }]],
+>     plugins: [require.resolve('react-native-reanimated/plugin')],
+>   };
+> };
+> ```
+>
+> `reanimated: false` only disables auto-injection; it does not remove the plugin — the effective config still contains exactly one Reanimated plugin. This is not in conflict with "do not add it manually" above: use **either** auto-injection **or** an explicit pin, never both.
+
+This library also recommends wrapping your Metro config with Reanimated 3's `wrapWithReanimatedMetroConfig` for readable worklet stack traces:
 
 ```js
 const { getDefaultConfig } = require('expo/metro-config');
