@@ -34,7 +34,10 @@ env:
   # 维护者签名公钥存放路径（人工在 Phase 8 放入，见 docs/reanimated3-native-builds.md）。
   VERIFIER_KEY: .github/keys/reanimated3-maintainer.gpg.pub.asc
   # 固定预期的公钥 fingerprint（十六进制指纹，人类任务填写；留空则 fail-closed）。
-  EXPECTED_FINGERPRINT: ''
+  # 取值 = .github/keys 里公钥的主密钥指纹，必须与 tag 签名者一致。取值方法见
+  # docs/reanimated3-native-builds.md 第 5 节（用 gpg --with-colons --fingerprint
+  # --import-options show-only --import 打印，取第一条 fpr）。
+  EXPECTED_FINGERPRINT: '3E4DAD4C52554F4E76BF5C0F786E3DCFA1B8FF51'
 
 jobs:
   validate-v1-tag:

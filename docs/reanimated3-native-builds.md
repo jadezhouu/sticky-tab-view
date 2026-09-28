@@ -172,3 +172,84 @@ CI 在每个锚点记录 `require.resolve`、`pnpm why --filter` 与 native auto
 hoist。人工设备完成后，release-candidate 通过受保护输入 `device_evidence_url` 生成
 attestation artifact（含 candidate SHA、设备证据链接、`triggered_by` 触发者、时间；真实
 environment reviewer 由部署审批记录单独保存）。
+
+## 5. `v1.*` 发布签名密钥与 tag 校验（V3-6-04 / V3-2a）
+
+`tag-validation.yml` 对 `v1.*` tag 强制 GPG 校验，且是 **fail-closed**：公钥文件缺失或
+`EXPECTED_FINGERPRINT` 为空都直接失败——不允许把 `git verify-tag` 写成"可假通过"的门禁。
+维护者需一次性完成 5.1，之后每次发布按 5.2 自检。
+
+### 5.1 一次性固化（人工）
+
+**1) 生成专用签名密钥**（不要复用个人主密钥）：
+
+```bash
+# 交互式：密钥类型选 (10) ECC (sign only) → 曲线 (1) Curve 25519 → 有效期 2y
+gpg --full-generate-key
+
+# 或非交互（口令经 stdin 传入，不进 shell 历史、不进 ps）：
+printf '%s' "$PASS" | gpg --batch --pinentry-mode loopback --passphrase-fd 0 \
+  --quick-generate-key "sticky-tab-view reanimated3 maintainer <you@example.com>" ed25519 sign 2y
+```
+
+> macOS 上交互式的口令框容易出现"弹在其他窗口后面"而超时（`agent_genkey failed: Timeout`，
+> 密钥不会落盘，可安全重跑）。上面的非交互写法绕开 pinentry，更稳。
+
+**2) 导出公钥到仓库**：
+
+```bash
+# 必须用 --list-secret-keys（私钥环）。用 --list-keys 会列公钥环——里面可能早有别人
+# 导入的公钥，会静默导出错误对象，得到一个"看起来正常"的错误指纹。
+FPR=$(gpg --list-secret-keys --with-colons | awk -F: '$1=="fpr"{print $10; exit}')
+mkdir -p .github/keys
+gpg --armor --export "$FPR" > .github/keys/reanimated3-maintainer.gpg.pub.asc
+```
+
+**3) 取指纹并填入 workflow**（40 位大写十六进制、无空格，取**主密钥**指纹）：
+
+```bash
+TMPG=$(mktemp -d); chmod 700 "$TMPG"
+GNUPGHOME="$TMPG" gpg --with-colons --fingerprint --import-options show-only \
+  --import .github/keys/reanimated3-maintainer.gpg.pub.asc 2>/dev/null \
+  | awk -F: '$1=="fpr"{print $10; exit}'   # ← 填这一串
+rm -rf "$TMPG"
+```
+
+填入 `.github/workflows/tag-validation.yml` 的 `EXPECTED_FINGERPRINT`。
+
+> `GNUPGHOME=` 用**行内前缀**，不要 `export`：导出的临时密钥环会残留到当前 shell，之后
+> `gpg`（包括签 tag）都会跑在空密钥环上报错，且很难排查。
+
+**4) 提交走 PR**：`maintenance/reanimated-3` 受 ruleset 保护（`pull_request` +
+`required_status_checks`，无 bypass），不能直推。
+
+### 5.2 打 tag 前自检（本地，**不要推送**）
+
+```bash
+FPR=<你的主密钥指纹>
+git tag -s v1.0.0-beta.0-dryrun -u "$FPR" -m "dry run"
+git cat-file -t v1.0.0-beta.0-dryrun    # 必须输出 tag（annotated signed tag）
+
+TMPG=$(mktemp -d); chmod 700 "$TMPG"    # 复刻 CI 的干净 keyring：只导入公钥
+GNUPGHOME="$TMPG" gpg --batch --quiet --import .github/keys/reanimated3-maintainer.gpg.pub.asc
+GNUPGHOME="$TMPG" git -c gpg.program="$(command -v gpg)" verify-tag --raw v1.0.0-beta.0-dryrun
+rm -rf "$TMPG"
+git tag -d v1.0.0-beta.0-dryrun         # 用完立刻删；v1.* 推送会触发 tag-validation
+```
+
+`TRUST_UNDEFINED` 是正常的：信任来自 workflow 里固定的指纹，不是 gpg 的信任网。
+
+### 5.3 有效期与轮换
+
+- 密钥过期**不会**让已签的 tag 失效（实测 `EXPKEYSIG` 警告下 `git verify-tag` 仍 exit 0），
+  但**过期后签不了新 tag**：`gpg: signing failed: Unusable secret key`（git exit 128）。
+- 延长有效期：`gpg --quick-set-expire <FPR> 2y` —— **主密钥指纹不变**，
+  `EXPECTED_FINGERPRINT` 无需改动；顺手重新导出 `.asc` 提交一次（更新过期日）。
+- 更换密钥 = 重跑 5.1：新 `.asc` + 新指纹 + 同一条 PR 流程。
+
+### 5.4 私钥纪律
+
+- 私钥**永不入库、永不放进 CI secret**：tag 由维护者本地签，CI 只做验证。
+- 撤销证书（`~/.gnupg/openpgp-revocs.d/<FPR>.rev`）与私钥一起离线备份。
+- 私钥丢失 → 无法发布（只能换钥重跑 5.1）；私钥泄露 → 立即撤销并换钥，同时在 GitHub/npm
+  侧处置已发布产物。
