@@ -276,6 +276,41 @@ export default function MyScreen() {
 `tabBarHeight` 必须与自定义 Tab 栏的高度一致。挂载后切换 Tab，用 `ref.current?.setTab(index)`；
 之后修改 `current` 不会控制激活的 Tab。
 
+#### 两个容易漏掉的要求
+
+**1. 每个 Tab 都必须在其内容顶部预留头部高度。** 头部与 Tab 栏是覆盖在 Tab 内容之上的，
+所以每个 Tab 的开头都要放一个「头部高度 + `tabBarHeight`」（再加上安全区内边距）的占位，
+否则第一项会被画到头部底下：
+
+```tsx
+const TOTAL_H = HEADER_BASE_H + insets.top + TAB_BAR_H;
+
+renderTab={(tab) => (
+  <ElasticScrollView>
+    <View style={{ height: TOTAL_H }} />
+    {/* …内容… */}
+  </ElasticScrollView>
+)}
+```
+
+`MasonryList` 通过它的 `renderHeader` prop 放同一个占位。
+
+**2. `renderTabBar` 收到的是 Reanimated shared value，不是普通数字。** `x`、`ys`、`current`
+都是 `SharedValue`：要在 **UI 线程**读取（`useAnimatedReaction` / `useAnimatedStyle`），需要在 JS
+里用时再通过 Reanimated 的 `runOnJS` 推回 React state。**在 render 里直接读 `.value` 只会取到
+一次快照，之后永不更新**：
+
+```tsx
+const [active, setActive] = useState(0);
+
+useAnimatedReaction(
+  () => current.value,
+  (next, prev) => {
+    if (next !== prev) runOnJS(setActive)(next);
+  },
+);
+```
+
 句柄方法：
 
 ```tsx

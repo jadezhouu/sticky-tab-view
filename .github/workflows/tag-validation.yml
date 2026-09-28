@@ -53,6 +53,18 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      # actions/checkout 检出 tag ref 时会**用 commit SHA 覆盖写入** refs/tags/<tag>：
+      # 它的 fetch 序列是先 `+refs/tags/*:refs/tags/*`（这一步 annotated tag 是对的），
+      # 紧接着再 `git fetch --no-tags ... +<commit-sha>:refs/tags/<tag>`，把本地 ref
+      # 变成**轻量 tag**（checkout@v4 实测日志）。轻量 tag 既过不了下面的 annotated
+      # 检查，也无法 `git verify-tag`——2026-09-28 首次推 v1.0.0-beta.0 时由此失败。
+      # 因此这里按 tag ref 重新 fetch 一次，拿回真正的 tag 对象（--force 才能覆盖）。
+      - name: Restore annotated tag object (checkout dereferences it)
+        run: |
+          REF="refs/tags/${GITHUB_REF_NAME}"
+          git fetch --force origin "${REF}:${REF}"
+          echo "tag object: $(git rev-parse "$REF") → $(git cat-file -t "$REF")"
+
       - name: Validate tag shape (v1.*)
         run: |
           REF="${{ github.ref }}"
