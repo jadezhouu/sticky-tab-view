@@ -14,10 +14,16 @@ Version lines:
 
 No unreleased changes yet.
 
-## [1.0.0-beta.0] — unreleased
+## [1.0.0-beta.0] — 2026-09-28
 
-Planned first public prerelease of the Reanimated 3 compatibility line (`1.x`), to be
-published under the `reanimated3-next` dist-tag (not yet published).
+First public prerelease of the Reanimated 3 compatibility line (`1.x`), published under
+the `reanimated3-next` dist-tag.
+
+This is an **early-access prerelease**. The automated gate is complete: the full 8-combo
+native build matrix plus the JS/package gate run on CI for the released candidate. The
+runtime smoke was executed against the same candidate as described below; the
+**real-device** smoke and the frame-time benchmark are still outstanding and remain
+required before `1.0.0` stable.
 
 ### Added
 

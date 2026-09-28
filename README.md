@@ -266,6 +266,36 @@ A paged container with a shared collapsible header. Vertical drags that begin in
 
 `tabBarHeight` must match the height of a custom tab bar. To switch tabs after mount, use `ref.current?.setTab(index)`; changing `current` later does not control the active tab.
 
+#### Two requirements that are easy to miss
+
+**1. Each tab must reserve the header height at the top of its content.** The header and tab bar overlay the tab content, so every tab has to begin with a spacer of header height + `tabBarHeight` (+ any safe-area inset). Without it the first item renders underneath the header:
+
+```tsx
+const TOTAL_H = HEADER_BASE_H + insets.top + TAB_BAR_H;
+
+renderTab={(tab) => (
+  <ElasticScrollView>
+    <View style={{ height: TOTAL_H }} />
+    {/* …content… */}
+  </ElasticScrollView>
+)}
+```
+
+`MasonryList` takes the same spacer through its `renderHeader` prop.
+
+**2. `renderTabBar` receives Reanimated shared values, not plain numbers.** `x`, `ys` and `current` are `SharedValue`s: read them on the UI thread (`useAnimatedReaction` / `useAnimatedStyle`) and push the result to React state with Reanimated's `runOnJS` when you need it in JS. Reading `.value` during render only captures a one-off snapshot that never updates:
+
+```tsx
+const [active, setActive] = useState(0);
+
+useAnimatedReaction(
+  () => current.value,
+  (next, prev) => {
+    if (next !== prev) runOnJS(setActive)(next);
+  },
+);
+```
+
 Handle method:
 
 ```tsx
