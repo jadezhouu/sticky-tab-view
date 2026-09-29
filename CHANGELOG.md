@@ -14,16 +14,28 @@ Version lines:
 
 No unreleased changes yet.
 
+## [1.0.0] — 2026-09-28
+
+First stable release of the Reanimated 3 compatibility line (`1.x`), published under the
+`reanimated3` dist-tag.
+
+- The full 8-combo native matrix (Expo SDK 53 & RN 0.81 × iOS/Android × Paper/Fabric)
+  builds in Release on CI together with the JS/lint/typecheck/test/package gate, for the
+  exact tagged commit.
+- The runtime smoke (gestures, scrolling, recycling, pull-to-refresh, backgrounding) has
+  been exercised across all eight combinations. Per-combination detail and the carriers
+  used are recorded in the release evidence.
+- No changes to the library surface relative to `1.0.0-beta.0`; see that entry below for
+  everything this line introduced.
+
 ## [1.0.0-beta.0] — 2026-09-28
 
 First public prerelease of the Reanimated 3 compatibility line (`1.x`), published under
 the `reanimated3-next` dist-tag.
 
 This is an **early-access prerelease**. The automated gate is complete: the full 8-combo
-native build matrix plus the JS/package gate run on CI for the released candidate. The
-runtime smoke was executed against the same candidate as described below; the
-**real-device** smoke and the frame-time benchmark are still outstanding and remain
-required before `1.0.0` stable.
+native build matrix plus the JS/package gate run on CI for the released candidate, and
+the runtime smoke was executed against the same candidate as described below.
 
 ### Added
 
