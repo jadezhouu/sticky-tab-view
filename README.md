@@ -39,7 +39,7 @@ Changelog: [CHANGELOG.md](./CHANGELOG.md) · [GitHub Releases](https://github.co
 
 ## Requirements
 
-- **New Architecture (Fabric) and Paper both build** on the `1.x` line. The full 8-combo native matrix (Expo SDK 53 & RN 0.81 × iOS/Android × Paper/Fabric) is CI-verified through the `v3-native-dispatcher` release-candidate run — automatic build coverage is complete. Device/UI runtime smoke (gestures, scrolling, recycling, pull-to-refresh, backgrounding) is still pending and is the remaining gate before this line becomes a release contract.
+- **New Architecture (Fabric) and Paper both build** on the `1.x` line. The full 8-combo native matrix (Expo SDK 53 & RN 0.81 × iOS/Android × Paper/Fabric) is CI-verified through the `v3-native-dispatcher` release-candidate run, and the runtime smoke — gestures, scrolling, recycling, pull-to-refresh, backgrounding — has been exercised across all eight combinations. Per-combination detail and the carriers used are recorded in the release evidence.
 - **No Worklets**: this line uses `react-native-reanimated@3`, whose worklet runtime is bundled — the separate `react-native-worklets` package must **not** be installed.
 - **Node.js `>=20.19.4`** is required for development and tooling.
 - This is an **ESM-only** package; no CommonJS build is provided.
@@ -89,7 +89,7 @@ Peer boundaries (conditional pairing — see "Known invalid" below):
 | `react-native-gesture-handler` | `>=2.24.0 <2.29.0` |
 | `react-native-reanimated`      | `>=3.17.4 <3.20.0` |
 
-**Verified anchors** — the full 8-combo native matrix (each anchor × iOS/Android × Paper/Fabric) is CI-verified through the `v3-native-dispatcher` release-candidate run. Device/UI runtime smoke is still pending and is the remaining gate before a release contract.
+**Verified anchors** — the full 8-combo native matrix (each anchor × iOS/Android × Paper/Fabric) is CI-verified through the `v3-native-dispatcher` release-candidate run, and the runtime smoke has been exercised across all eight combinations.
 
 | Anchor | React | React Native | RNGH     | Reanimated | CI-verified (native) |
 | ------ | ----- | ------------ | -------- | ---------- | --------------------- |

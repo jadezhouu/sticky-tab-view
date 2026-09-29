@@ -40,8 +40,8 @@
 
 - **新架构（Fabric）与 Paper 都能构建**。全八组合原生矩阵（Expo SDK 53 与 RN 0.81 ×
   iOS/Android × Paper/Fabric）已通过 main 上的 `v3-native-dispatcher` release-candidate
-  运行在 CI 验证 —— 自动构建覆盖完整。设备/UI 运行时冒烟（手势、滚动、回收、下拉刷新、
-  前后台）仍待进行，是发布契约前的最后一道门禁。
+  运行在 CI 验证；运行时冒烟（手势、滚动、回收、下拉刷新、前后台）也已在全部八个组合上
+  执行。逐组合的明细与实际使用的载体记录在发布证据中。
 - **无 Worklets**：本线使用 `react-native-reanimated@3`，其 worklet 运行时已内置于
   Reanimated 3，独立的 `react-native-worklets` 包**不得**安装。
 - 开发与工具链需 **Node.js `>=20.19.4`**。
@@ -96,8 +96,7 @@ Peer 边界（条件配对 —— 见下方"已知无效"）：
 | `react-native-reanimated`      | `>=3.17.4 <3.20.0` |
 
 **已验证锚点** —— 全八组合原生矩阵（每个锚点 × iOS/Android × Paper/Fabric）已通过
-`v3-native-dispatcher` 的 release-candidate 运行在 CI 验证。设备/UI 运行时冒烟仍待进行，
-是发布契约前的最后一道门禁。
+`v3-native-dispatcher` 的 release-candidate 运行在 CI 验证，运行时冒烟也已在全部八个组合上执行。
 
 | 锚点              | React   | React Native | RNGH   | Reanimated | CI 已验证（原生）         |
 | ----------------- | ------- | ------------ | ------ | ---------- | ------------------------- |
