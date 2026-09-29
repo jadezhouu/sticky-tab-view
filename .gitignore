@@ -40,6 +40,22 @@ yarn-error.*
 # 注意：只忽略 example/ 下的生成物；fixtures/rn-081/android|ios 是提交的锚点原生工程，不能忽略。
 /example/ios
 /example/android
+# fixtures/rn-081：原生工程本身是**提交的锚点**（上面的排除不适用于它），
+# 但工程目录内的构建产物与本地环境文件必须忽略，否则跑一次本地构建就会
+# 在 git status 里堆出一片 untracked。
+/fixtures/rn-081/android/.gradle/
+/fixtures/rn-081/android/build/
+/fixtures/rn-081/android/app/build/
+/fixtures/rn-081/android/app/.cxx/
+/fixtures/rn-081/android/local.properties
+/fixtures/rn-081/ios/Pods/
+/fixtures/rn-081/ios/build/
+/fixtures/rn-081/ios/Podfile.lock
+/fixtures/rn-081/ios/.xcode.env
+/fixtures/rn-081/ios/.xcode.env.local
+/fixtures/rn-081/ios/*.xcworkspace/
+/fixtures/rn-081/ios/*.xcodeproj/xcuserdata/
+/fixtures/rn-081/ios/*.xcodeproj/project.xcworkspace/xcuserdata/
 
 # npm (use pnpm)
 package-lock.json

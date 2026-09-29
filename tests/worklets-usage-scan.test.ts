@@ -3,10 +3,9 @@
  *
  * 依据 Phase 4 退出门禁：
  *   - `src/` / `example/` / `fixtures/` 无 react-native-worklets import；
- *   - 除适配层外，不得直接调用 `runOnJS`。适配层有两个允许位置：库内
- *     `src/scheduleOnReactNative.ts`，以及 example 的本地副本
- *     `example/src/utils/scheduleOnReactNative.ts`（P1-01 内聚后 example 不再
- *     通过包子路径导入，改为保留本地副本）。
+ *   - 除适配层外，不得直接调用 `runOnJS`。适配层允许出现在三处：库内
+ *     `src/scheduleOnReactNative.ts`，以及 example / fixtures 各自的本地副本
+ *     （P1-01 内聚后两个消费者锚点都不通过包子路径导入，改为各自保留本地副本）。
  *
  * 红态：PR-1 已清除 worklets import（第一条已绿），但所有调用点仍直接使用
  * `runOnJS`（第二条按预期失败）；实现（V3-4-03/04）后全绿。
@@ -18,8 +17,12 @@ import path from 'path';
 
 const ROOT = path.resolve(__dirname, '..');
 const SCAN_DIRS = ['src', 'example/src', 'fixtures/rn-081'];
-// runOnJS 唯一允许出现的文件：库内适配层 + example 的本地副本。
-const ADAPTER_RELS = ['src/scheduleOnReactNative.ts', 'example/src/utils/scheduleOnReactNative.ts'];
+// runOnJS 唯一允许出现的文件：库内适配层 + 两个消费者锚点各自的本地副本。
+const ADAPTER_RELS = [
+  'src/scheduleOnReactNative.ts',
+  'example/src/utils/scheduleOnReactNative.ts',
+  'fixtures/rn-081/src/utils/scheduleOnReactNative.ts',
+];
 
 function listTsFiles(dir: string): string[] {
   const out: string[] = [];
