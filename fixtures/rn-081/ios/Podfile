@@ -52,5 +52,24 @@ target 'StickyTabViewFixture' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Xcode 26+/27 本地构建所需的两项加固（CI 的 Xcode 16 上无副作用）：
+    #
+    # 1) 部署目标下限：Xcode 27 拒绝 IPHONEOS_DEPLOYMENT_TARGET 低于 SDK 下限（15.0）的 pod
+    #    target，而部分 RN/Expo 依赖仍声明 9.0（实测 SDWebImage）。低于 15.0 的统一抬到 15.1。
+    # 2) fmt consteval 回归：fmt 11.0.2 的 format-inl.h 只在 Apple clang < 14 时规避 consteval，
+    #    Xcode 26+ / Clang 21+ 下会编译失败。强制 C++17 即令 FMT_USE_CONSTEVAL=0
+    #    （example 侧由 plugins/with-fmt-cpp17.js 做同样的事）。
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        current = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if current.nil? || current.to_f < 15.0
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
+        end
+        if target.name == 'fmt'
+          config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+        end
+      end
+    end
   end
 end
