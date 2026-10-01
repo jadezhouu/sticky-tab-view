@@ -5,20 +5,19 @@
 React Native components for a gesture-responsive collapsible header, horizontal tab paging, synchronized scrolling, and masonry layouts. Built on `react-native-reanimated` and `react-native-gesture-handler`.
 
 <p align="center">
-  <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0/sticky-tab-view-demo.mp4">
-    <img
-      src="https://raw.githubusercontent.com/jadezhouu/sticky-tab-view/main/.github/assets/demo.PNG"
-      width="360"
-      alt="StickyTabView demo showing collapsible tabs and scrolling content"
-    />
-  </a>
+  <video
+    src="https://github.com/user-attachments/assets/9e1d57e6-5f98-4791-970b-1b444626d2e5"
+    width="360"
+    controls>
+  </video>
 </p>
 
 <p align="center">
   <a href="https://github.com/jadezhouu/sticky-tab-view/releases/download/v2.0.0/sticky-tab-view-demo.mp4">
-    Watch the HD demo video
+    Download the demo video
   </a>
 </p>
+
 
 ## Features
 
